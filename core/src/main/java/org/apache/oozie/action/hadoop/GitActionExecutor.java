@@ -20,9 +20,11 @@ package org.apache.oozie.action.hadoop;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.net.ConnectException;
 import java.net.UnknownHostException;
 import java.util.List;
+import java.lang.Object;
 
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.conf.Configuration;
@@ -50,8 +52,8 @@ public class GitActionExecutor extends JavaActionExecutor {
     static final String CALLBACK_URL = "oozie.oozie.callback.url";
     static final String JOB_TRACKER = "oozie.oozie.job.tracker";
     static final String NAME_NODE = "oozie.oozie.name.node";
-    static final String GIT_URI = "oozie.git.git.uri";
-    static final String GIT_BRANCH = "oozie.git.git.branch";
+    static final String GIT_URI = "oozie.git.source.uri";
+    static final String GIT_BRANCH = "oozie.git.branch";
     static final String DESTINATION_URI = "oozie.git.destination.uri";
     static final String KEY_PATH = "oozie.git.key.path";
     static final String ACTION_TYPE = "oozie.oozie.action.type";
@@ -63,13 +65,12 @@ public class GitActionExecutor extends JavaActionExecutor {
 
     @SuppressWarnings("rawtypes")
     @Override
-    public List<Class> getLauncherClasses() {
-        List<Class> classes = super.getLauncherClasses();
-        classes.add(LauncherMain.class);
-        classes.add(MapReduceMain.class);
+    public List<Class<?>> getLauncherClasses() {
+       List<Class<?>> classes = new ArrayList<Class<?>>();
         try {
             classes.add(Class.forName(GIT_MAIN_CLASS_NAME));
-        } catch (ClassNotFoundException e) {
+        }
+        catch (ClassNotFoundException e) {
             throw new RuntimeException("Class not found", e);
         }
         return classes;
@@ -99,82 +100,84 @@ public class GitActionExecutor extends JavaActionExecutor {
         registerError(IOException.class.getName(), ActionExecutorException.ErrorType.TRANSIENT, "HES009");
     }
 
+    /**
+     * Verifies a value is not null and if so, sets it into the actionConf
+     * can optionally throw an ActionExecutorException if the value is mandatory
+     *
+     * @param  value       value to verify is non-null
+     * @param  displayName the actionConf name to use (will be printed in the exception too)
+     * @param  fatal       if an exception should be raised if the value is null
+     * @param  getTextTrim if we should run the getTextTrim() method on the value verified
+     * @return             true if value was non-null
+     */
+    public static boolean verifyPropertyNotNull(Object value, String displayName,
+                               boolean fatal) throws RuntimeException {
+        if (value == null) {
+            if (fatal)
+                throw new RuntimeException("Action Configuration does not have "
+                          + displayName + " property");
+            return(false);
+        } else {
+            return(true);
+        }
+    }
+    
+    private void verifyPropertyNotNullFatal(String value, String displayName, Configuration actionConf) {
+        if (verifyPropertyNotNull(value, displayName, true)) {
+            actionConf.set(displayName, value);
+        }
+    }
+    
+    private void verifyPropertyNotNullFatalTT(Element value, String displayName, Configuration actionConf) {
+        if (verifyPropertyNotNull(value, displayName, true)) {
+            actionConf.set(displayName, value.getTextTrim());
+        }
+    }
+    
+    private void verifyPropertyNotNullConfOnlyTT(Element value, String displayName, Configuration actionConf) {
+        if (verifyPropertyNotNull(value, displayName, false)) {
+            actionConf.set(displayName, value.getTextTrim());
+        }
+    }
+    
     @Override
     @SuppressWarnings("unchecked")
     Configuration setupActionConf(Configuration actionConf, Context context,
                                   Element actionXml, Path appPath) throws ActionExecutorException {
         super.setupActionConf(actionConf, context, actionXml, appPath);
+                
         Namespace ns = actionXml.getNamespace();
 
         // APP_NAME
-        String appName = context.getWorkflow().getAppName();
-        if (appName == null) {
-            throw new RuntimeException("Action Configuration does not have "
-                    + GitActionExecutor.APP_NAME + " property");
-        }
+        verifyPropertyNotNullFatal(context.getWorkflow().getAppName(), GitActionExecutor.APP_NAME, actionConf);
+
         //WORKFLOW_ID
-        String workflowId = context.getWorkflow().getId();
-        if (workflowId == null) {
-            throw new RuntimeException("Action Configuration does not have "
-                    + GitActionExecutor.WORKFLOW_ID + " property");
-        }
+        verifyPropertyNotNullFatal(context.getWorkflow().getId(), GitActionExecutor.WORKFLOW_ID, actionConf);
+        
         // CALLBACK_URL
-        String callbackUrl = context.getCallbackUrl("$jobStatus");
-        if (callbackUrl == null) {
-            throw new RuntimeException("Action Configuration does not have "
-                    + GitActionExecutor.CALLBACK_URL + " property");
-        }
-        actionConf.set(CALLBACK_URL, callbackUrl);
+        verifyPropertyNotNullFatal(context.getCallbackUrl("$jobStatus"), GitActionExecutor.CALLBACK_URL, actionConf);       
 
         // JOB_TRACKER
-        Element jobTracker = actionXml.getChild("job-tracker", ns);
-        if (jobTracker == null) {
-            throw new RuntimeException("Action Configuration does not have "
-                    + GitActionExecutor.JOB_TRACKER + " property");
-        }
-        actionConf.set(JOB_TRACKER, jobTracker.getTextTrim());
+        verifyPropertyNotNullFatalTT(actionXml.getChild("job-tracker", ns), GitActionExecutor.JOB_TRACKER, actionConf);
 
         //NAME_NODE
-        Element nameNode = actionXml.getChild("name-node", ns);
-        if (nameNode == null) {
-            throw new RuntimeException("Action Configuration does not have "
-                    + GitActionExecutor.NAME_NODE + " property");
-        }
-        actionConf.set(NAME_NODE, nameNode.getTextTrim());
+        verifyPropertyNotNullFatalTT(actionXml.getChild("name-node", ns), GitActionExecutor.NAME_NODE, actionConf);
 
         // DESTINATION_URI
-        Element destinationUri = actionXml.getChild("destination-uri", ns);
-        if (destinationUri == null) {
-            throw new RuntimeException("Action Configuration does not have "
-                    + GitActionExecutor.DESTINATION_URI + " property");
-        }
-        actionConf.set(DESTINATION_URI, destinationUri.getTextTrim());
+        verifyPropertyNotNullFatalTT(actionXml.getChild("destination-uri", ns), GitActionExecutor.DESTINATION_URI, actionConf);
 
         // GIT_URI
-        Element gitUri = actionXml.getChild("git-uri", ns);
-        if (gitUri == null) {
-            throw new RuntimeException("Action Configuration does not have "
-                    + GitActionExecutor.GIT_URI + " property");
-        }
-        actionConf.set(GIT_URI, gitUri.getTextTrim());
+        verifyPropertyNotNullFatalTT(actionXml.getChild("git-uri", ns), GitActionExecutor.GIT_URI, actionConf);
 
-        Element keyPath = actionXml.getChild("key-path", ns);
-        if (keyPath != null) {
-          actionConf.set(KEY_PATH, keyPath.getTextTrim());
-        }
+        // KEY_PATH
+        verifyPropertyNotNullConfOnlyTT(actionXml.getChild("key-path", ns), KEY_PATH, actionConf);
 
-        Element branch = actionXml.getChild("branch", ns);
-        if (branch != null) {
-          actionConf.set(GIT_BRANCH, branch.getTextTrim());
-        }
+        // GIT_BRANCH
+        verifyPropertyNotNullConfOnlyTT(actionXml.getChild("branch", ns), GIT_BRANCH, actionConf);
 
-        String actionType = getType();
-        String actionName = "git";
-
-        actionConf.set(APP_NAME, appName);
-        actionConf.set(WORKFLOW_ID, workflowId);
-        actionConf.set(ACTION_TYPE, actionType);
-        actionConf.set(ACTION_NAME, actionName);
+        actionConf.set(ACTION_TYPE, getType());
+        actionConf.set(ACTION_NAME, "git");
+        
         return actionConf;
     }
 

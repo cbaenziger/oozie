@@ -38,7 +38,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobID;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.oozie.action.hadoop.ActionExecutorTestCase.Context;
-import org.apache.oozie.action.hadoop.LauncherMapperHelper;
+import org.apache.oozie.action.hadoop.LauncherHelper;
 import org.apache.oozie.action.hadoop.SharelibUtils;
 import org.apache.oozie.client.WorkflowAction;
 import org.apache.oozie.service.HadoopAccessorService;
@@ -100,9 +100,9 @@ public class TestIntegrationGitActionExecutor extends ActionExecutorTestCase{
             }
         });
         assertTrue(launcherJob.isSuccessful());
-        Map<String, String> actionData = LauncherMapperHelper.getActionData(getFileSystem(), context.getActionDir(),
+        Map<String, String> actionData = LauncherHelper.getActionData(getFileSystem(), context.getActionDir(),
                 context.getProtoActionConf());
-        assertFalse(LauncherMapperHelper.hasIdSwap(actionData));
+        assertFalse(LauncherHelper.hasIdSwap(actionData));
 
         GitActionExecutor ae = new GitActionExecutor();
         ae.check(context, context.getAction());

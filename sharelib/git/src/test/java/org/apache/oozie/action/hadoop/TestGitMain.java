@@ -46,7 +46,6 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobID;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.oozie.action.hadoop.ActionExecutorTestCase.Context;
-import org.apache.oozie.action.hadoop.LauncherMapperHelper;
 import org.apache.oozie.action.hadoop.SharelibUtils;
 import org.apache.oozie.client.WorkflowAction;
 import org.apache.oozie.command.wf.ActionXCommand.ActionExecutorContext;
@@ -122,18 +121,13 @@ public class TestGitMain extends XFsTestCase {
 
         GitMain gitmain = new GitMain();
 
-        // allow us to call getKey()
+        // allow us to call getKeyFromFS()
         Class<?>[] args = new Class<?>[] { Path.class } ;
-        Method getKeyMethod = gitmain.getClass().getDeclaredMethod("getKey", args);
+        Method getKeyMethod = gitmain.getClass().getDeclaredMethod("getKeyFromFS", args);
         getKeyMethod.setAccessible(true);
- 
-        // Ugly hack to set namenode for getKeys()
-        Field field = gitmain.getClass().getDeclaredField("nameNode");
-        field.setAccessible(true);
-        field.set(gitmain, getNameNodeUri());
 
         File localFile = (File) getKeyMethod.invoke(gitmain, credentialFilePath);
-//        File localFile = gitmain.getKey(credentialFilePath);
+//        File localFile = gitmain.getKeyFromFS(credentialFilePath);
 
         FileReader reader = new FileReader(localFile);
         char[] testOutput = new char[credentialFileData.length()];

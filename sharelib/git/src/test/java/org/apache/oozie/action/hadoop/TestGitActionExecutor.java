@@ -41,7 +41,6 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobID;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.oozie.action.hadoop.ActionExecutorTestCase.Context;
-import org.apache.oozie.action.hadoop.LauncherMapperHelper;
 import org.apache.oozie.action.hadoop.SharelibUtils;
 import org.apache.oozie.client.WorkflowAction;
 import org.apache.oozie.service.HadoopAccessorService;
