@@ -85,59 +85,21 @@ public class GitActionExecutor extends JavaActionExecutor {
     @Override
     public void initActionType() {
         super.initActionType();
-        registerError(UnknownHostException.class.getName(), ActionExecutorException.ErrorType.TRANSIENT, "HES001");
+        registerError(UnknownHostException.class.getName(), ActionExecutorException.ErrorType.TRANSIENT, "GIT001");
         registerError(AccessControlException.class.getName(), ActionExecutorException.ErrorType.NON_TRANSIENT,
                 "JA002");
         registerError(DiskChecker.DiskOutOfSpaceException.class.getName(),
-                ActionExecutorException.ErrorType.NON_TRANSIENT, "HES003");
+                ActionExecutorException.ErrorType.NON_TRANSIENT, "GIT003");
         registerError(org.apache.hadoop.hdfs.protocol.QuotaExceededException.class.getName(),
-                ActionExecutorException.ErrorType.NON_TRANSIENT, "HES004");
+                ActionExecutorException.ErrorType.NON_TRANSIENT, "GIT004");
         registerError(org.apache.hadoop.hdfs.server.namenode.SafeModeException.class.getName(),
-                ActionExecutorException.ErrorType.NON_TRANSIENT, "HES005");
-        registerError(ConnectException.class.getName(), ActionExecutorException.ErrorType.TRANSIENT, "  HES006");
-        registerError(JDOMException.class.getName(), ActionExecutorException.ErrorType.ERROR, "HES007");
-        registerError(FileNotFoundException.class.getName(), ActionExecutorException.ErrorType.ERROR, "HES008");
-        registerError(IOException.class.getName(), ActionExecutorException.ErrorType.TRANSIENT, "HES009");
-    }
+                ActionExecutorException.ErrorType.NON_TRANSIENT, "GIT005");
+        registerError(ConnectException.class.getName(), ActionExecutorException.ErrorType.TRANSIENT, "  GIT006");
+        registerError(JDOMException.class.getName(), ActionExecutorException.ErrorType.ERROR, "GIT007");
+        registerError(FileNotFoundException.class.getName(), ActionExecutorException.ErrorType.ERROR, "GIT008");
+        registerError(IOException.class.getName(), ActionExecutorException.ErrorType.TRANSIENT, "GIT009");
+        // GIT010 reserved for actionXml parsing
 
-    /**
-     * Verifies a value is not null and if so, sets it into the actionConf
-     * can optionally throw an ActionExecutorException if the value is mandatory
-     *
-     * @param  value       value to verify is non-null
-     * @param  displayName the actionConf name to use (will be printed in the exception too)
-     * @param  fatal       if an exception should be raised if the value is null
-     * @param  getTextTrim if we should run the getTextTrim() method on the value verified
-     * @return             true if value was non-null
-     */
-    public static boolean verifyPropertyNotNull(Object value, String displayName,
-                               boolean fatal) throws RuntimeException {
-        if (value == null) {
-            if (fatal)
-                throw new RuntimeException("Action Configuration does not have "
-                          + displayName + " property");
-            return(false);
-        } else {
-            return(true);
-        }
-    }
-    
-    private void verifyPropertyNotNullFatal(String value, String displayName, Configuration actionConf) {
-        if (verifyPropertyNotNull(value, displayName, true)) {
-            actionConf.set(displayName, value);
-        }
-    }
-    
-    private void verifyPropertyNotNullFatalTT(Element value, String displayName, Configuration actionConf) {
-        if (verifyPropertyNotNull(value, displayName, true)) {
-            actionConf.set(displayName, value.getTextTrim());
-        }
-    }
-    
-    private void verifyPropertyNotNullConfOnlyTT(Element value, String displayName, Configuration actionConf) {
-        if (verifyPropertyNotNull(value, displayName, false)) {
-            actionConf.set(displayName, value.getTextTrim());
-        }
     }
     
     @Override
@@ -148,32 +110,34 @@ public class GitActionExecutor extends JavaActionExecutor {
                 
         Namespace ns = actionXml.getNamespace();
 
+        VerifyActionConf confChecker = new VerifyActionConf(actionConf, "GIT010");
+        
         // APP_NAME
-        verifyPropertyNotNullFatal(context.getWorkflow().getAppName(), GitActionExecutor.APP_NAME, actionConf);
+        confChecker.verifyPropertyNotNullFatal(context.getWorkflow().getAppName(), GitActionExecutor.APP_NAME);
 
         //WORKFLOW_ID
-        verifyPropertyNotNullFatal(context.getWorkflow().getId(), GitActionExecutor.WORKFLOW_ID, actionConf);
+        confChecker.verifyPropertyNotNullFatal(context.getWorkflow().getId(), GitActionExecutor.WORKFLOW_ID);
         
         // CALLBACK_URL
-        verifyPropertyNotNullFatal(context.getCallbackUrl("$jobStatus"), GitActionExecutor.CALLBACK_URL, actionConf);       
+        confChecker.verifyPropertyNotNullFatal(context.getCallbackUrl("$jobStatus"), GitActionExecutor.CALLBACK_URL);       
 
         // JOB_TRACKER
-        verifyPropertyNotNullFatalTT(actionXml.getChild("job-tracker", ns), GitActionExecutor.JOB_TRACKER, actionConf);
+        confChecker.verifyPropertyNotNullFatalTT(actionXml.getChild("job-tracker", ns), GitActionExecutor.JOB_TRACKER);
 
         //NAME_NODE
-        verifyPropertyNotNullFatalTT(actionXml.getChild("name-node", ns), GitActionExecutor.NAME_NODE, actionConf);
+        confChecker.verifyPropertyNotNullFatalTT(actionXml.getChild("name-node", ns), GitActionExecutor.NAME_NODE);
 
         // DESTINATION_URI
-        verifyPropertyNotNullFatalTT(actionXml.getChild("destination-uri", ns), GitActionExecutor.DESTINATION_URI, actionConf);
+        confChecker.verifyPropertyNotNullFatalTT(actionXml.getChild("destination-uri", ns), GitActionExecutor.DESTINATION_URI);
 
         // GIT_URI
-        verifyPropertyNotNullFatalTT(actionXml.getChild("git-uri", ns), GitActionExecutor.GIT_URI, actionConf);
+        confChecker.verifyPropertyNotNullFatalTT(actionXml.getChild("git-uri", ns), GitActionExecutor.GIT_URI);
 
         // KEY_PATH
-        verifyPropertyNotNullConfOnlyTT(actionXml.getChild("key-path", ns), KEY_PATH, actionConf);
+        confChecker.verifyPropertyNotNullConfOnlyTT(actionXml.getChild("key-path", ns), KEY_PATH);
 
         // GIT_BRANCH
-        verifyPropertyNotNullConfOnlyTT(actionXml.getChild("branch", ns), GIT_BRANCH, actionConf);
+        confChecker.verifyPropertyNotNullConfOnlyTT(actionXml.getChild("branch", ns), GIT_BRANCH);
 
         actionConf.set(ACTION_TYPE, getType());
         actionConf.set(ACTION_NAME, "git");
@@ -184,5 +148,78 @@ public class GitActionExecutor extends JavaActionExecutor {
     @Override
     protected String getDefaultShareLibName(Element actionXml) {
         return "git";
+    }
+    
+    static public class VerifyActionConf {
+        Configuration actionConf = null;
+        String exceptionCode = null;
+        
+        /**
+         * Create VerifyActionConf checker which will set action conf values and throw
+         * ActionExecutorException's with the exception code provided
+         *
+         * @param  actionConf       the actionConf in which to set values
+         * @param  exceptionCode    the exceptionCode string to use in validation failure exceptions
+         */
+        public VerifyActionConf(Configuration actionConf, String exceptionCode) {
+            this.actionConf = actionConf;
+            this.exceptionCode = exceptionCode;
+        }
+        
+        /**
+         * Verifies a value is not null and if so can optionally throw an 
+         * ActionExecutorException
+         *
+         * @param  value       value to verify is non-null
+         * @param  displayName the actionConf name to use (will be printed in the exception too)
+         * @param  fatal       if an exception should be raised if the value is null
+         * @param  getTextTrim if we should run the getTextTrim() method on the value verified
+         * @return             true if value was non-null
+         */
+        public static boolean verifyPropertyNotNull(Object value, String displayName,
+                                                    boolean fatal) throws ActionExecutorException {
+            if (value == null) {
+                if (fatal == true)
+                    throw new ActionExecutorException(ErrorType.ERROR, "GIT010",
+                            "Action Configuration does not have " + displayName + " property");
+                return(false);
+            } else {
+                return(true);
+            }
+        }
+        
+        /**
+         * Calls helper function to verify value not null and throw an exception if so.
+         * Otherwise, set acctionConf value displayName to value
+         */
+        public void verifyPropertyNotNullFatal(String value, String displayName) throws ActionExecutorException {
+            if (verifyPropertyNotNull(value, displayName, true)) {
+                actionConf.set(displayName, value);
+            }
+        }
+        
+        /**
+         * Calls helper function to verify value not null and throw an exception if so.
+         * Otherwise, set acctionConf value displayName to XML trimmed text value
+         */
+        public void verifyPropertyNotNullFatalTT(Element value, String displayName) throws ActionExecutorException {
+            if (verifyPropertyNotNull(value, displayName, true)) {
+                actionConf.set(displayName, value.getTextTrim());
+            }
+        }
+        
+        /**
+         * Calls helper function to verify value not null but does not throw an exception if null.
+         * Otherwise, sets acctionConf value displayName to XML trimmed text value
+         */
+        public void verifyPropertyNotNullConfOnlyTT(Element value, String displayName) {
+            try {
+              if (verifyPropertyNotNull(value, displayName, false)) {
+                  actionConf.set(displayName, value.getTextTrim());
+              }
+            } catch (ActionExecutorException e) {
+                // should never land here since we ask for verifyPropertyNotNull to not throw -- swallow here
+            }
+        }
     }
 }

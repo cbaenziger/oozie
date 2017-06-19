@@ -82,11 +82,6 @@ public class TestGitMain extends XFsTestCase {
      * Test handling the key properly and that the file is secured
      */
     public void testKeyFile() throws Exception {
-
-/* XXX       GitActionExecutor ae = new GitActionExecutor();
-        assertTrue("Can not find GitMain class is launcher classes",
-          ae.getLauncherClasses().contains(GitMain.class)); */
-
         final Path credentialFilePath = Path.mergePaths(getFsTestCaseDir(), new Path("/key_dir/my_key.dsa"));
         final String credentialFileData = "Key file data";
         final Path destDir = Path.mergePaths(getFsTestCaseDir(), new Path("/destDir"));
@@ -98,26 +93,8 @@ public class TestGitMain extends XFsTestCase {
         credentialFile.flush();
         credentialFile.close();
 
-/*        Element actionXml = XmlUtils.parseXml("<git>" +
-                "<job-tracker>" + getJobTrackerUri() + "</job-tracker>" +
-                "<name-node>" + getNameNodeUri() + "</name-node>" +
-                "<git-uri>" + repoUrl + "</git-uri>"+
-                "<key-path>" + credentialFilePath + "</key-path>"+
-                "<destination-uri>" + destDir + "</destination-uri>" +
-                "</git>");
-*/
-// XXX        XConfiguration protoConf = new XConfiguration();
-// XX        protoConf.set(WorkflowAppService.HADOOP_USER, getTestUser());
-
-// XXX        WorkflowJobBean wf = createBaseWorkflow(protoConf, "git-action");
- //       WorkflowJobBean wf = new WorkflowJobBean();
         WorkflowActionBean ga = new WorkflowActionBean();
 		ga.setType("git-action");
- //       ActionExecutorContext context = new ActionExecutorContext(wf, ga);
- //       WorkflowActionBean action = (WorkflowActionBean) wf.getActions().get(0);
-  //      action.setType(ae.getType());
-
-   //     Configuration conf = ae.createBaseHadoopConf(context, actionXml);
 
         GitMain gitmain = new GitMain();
 
@@ -126,9 +103,10 @@ public class TestGitMain extends XFsTestCase {
         Method getKeyMethod = gitmain.getClass().getDeclaredMethod("getKeyFromFS", args);
         getKeyMethod.setAccessible(true);
 
+        // actually copy the key to the local file system
         File localFile = (File) getKeyMethod.invoke(gitmain, credentialFilePath);
-//        File localFile = gitmain.getKeyFromFS(credentialFilePath);
 
+        // verify the key is the same as uploaded to HDFS
         FileReader reader = new FileReader(localFile);
         char[] testOutput = new char[credentialFileData.length()];
         assertEquals(13, credentialFileData.length());
@@ -136,49 +114,6 @@ public class TestGitMain extends XFsTestCase {
 
         assertEquals(credentialFileData, String.valueOf(testOutput));
         reader.close();
-
-/*        Context context = createContext(actionXml);
-        final RunningJob launcherJob = submitAction(context);
-        String launcherId = context.getAction().getExternalId();
-//XXX        waitFor(120 * 1000, new Predicate() {
-        waitFor(30 * 1000, new Predicate() {
-            public boolean evaluate() throws Exception {
-                return launcherJob.isComplete();
-            }
-        });
-        assertTrue(launcherJob.isSuccessful());
-        Map<String, String> actionData = LauncherMapperHelper.getActionData(getFileSystem(), context.getActionDir(),
-                context.getProtoActionConf());
-        assertFalse(LauncherMapperHelper.hasIdSwap(actionData));
-
-        GitActionExecutor ae = new GitActionExecutor();
-        ae.check(context, context.getAction());
-        assertTrue(launcherId.equals(context.getAction().getExternalId()));
-        assertEquals("SUCCEEDED", context.getAction().getExternalStatus());
-        ae.end(context, context.getAction());
-        assertEquals(WorkflowAction.Status.OK, context.getAction().getStatus());
-
-*/
-
-//        assertTrue(getFileSystem().exists(outputPath));
-//        assertTrue(getFileSystem().exists(gitIndex));
-
-        // the Git conf index should easily fit in memory
-//        ByteArrayOutputStream readContent = new ByteArrayOutputStream();
-//        byte[] buffer = new byte[1024];
-//        InputStream is = getFileSystem().open(gitIndex);
-//        int length;
-//        while ((length = is.read(buffer)) != -1) {
-//            readContent.write(buffer, 0, length);
-//        }
-//        String gitIndexContent = readContent.toString("UTF-8");
-//        is.close();
-
-        // The Git index file should have a core, remote and branch section
-        // verify it was properly pulled down
-//        assertTrue(gitIndexContent.toLowerCase().contains("core"));
-//        assertTrue(gitIndexContent.toLowerCase().contains("remote"));
-//        assertTrue(gitIndexContent.toLowerCase().contains("branch"));
     }
 
 }

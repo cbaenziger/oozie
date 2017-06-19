@@ -132,6 +132,9 @@ public class GitMain extends LauncherMain {
      * @return the location to where the key was saved
      */
     private File getKeyFromFS(Path location) throws IOException, URISyntaxException {
+        String mkdirMsg = "Local mkdir called creating temp. dir at: " + key.getAbsolutePath();
+        String keyCopyMsg = "Copied keys to local container!";
+        
         Configuration conf = new Configuration();
         FileSystem fs = FileSystem.newInstance(new URI(nameNode), conf);
         File key = new File(Files.createTempDirectory(
@@ -142,15 +145,13 @@ public class GitMain extends LauncherMain {
                    .fromString("rwx------")))
             .toString());
 
-        System.out.println("Local mkdir called creating temp. dir at: " +
-            key.getAbsolutePath());
-        LOG.debug("Local mkdir called creating temp. dir at: " +
-            key.getAbsolutePath());
+        System.out.println(mkdirMsg);
+        LOG.debug(mkdirMsg);
 
         fs.copyToLocalFile(location, new Path("file:///" +
             key.getAbsolutePath() + "/privkey"));
-        System.out.println("Copied keys to local container!");
-        LOG.debug("Copied keys to local container!");
+        System.out.println(keyCopyMsg);
+        LOG.debug(keyCopyMsg);
         return(new File(key.getAbsolutePath() + "/privkey"));
     }
 
@@ -202,9 +203,10 @@ public class GitMain extends LauncherMain {
         try {
             cloneCommand.call();
         } catch (GitAPIException e) {
+            String unableToCloneMsg = "Unable to clone Git repo: " + e
             e.printStackTrace();
-            LOG.error("Unable to clone Git repo: " + e);
-            throw new RuntimeException("Unable to clone Git repo: " + e);
+            LOG.error(unableToCloneMsg);
+            throw new RuntimeException(unableToCloneMsg);
         }
     }
 
@@ -218,6 +220,9 @@ public class GitMain extends LauncherMain {
      * @throws Exception
      */
     private String cloneRepoToFS(Path destination, URI gitSrc, String branch, File credentialFile) throws Exception {
+        String finishedCopyMsg = "Finished the copy to " + destination.toString() + "!";
+        String finishedCloneingMsg = "Finished cloning to local";
+        
         File tempD = new File(Files.createTempDirectory(
             Paths.get("."),
             "git_" + Long.toString(System.nanoTime()),
@@ -225,11 +230,10 @@ public class GitMain extends LauncherMain {
                 .asFileAttribute(PosixFilePermissions
                    .fromString("rwx------")))
             .toString());
-
-        System.out.println("Local mkdir called creating temp. dir at: " +
-            tempD.getAbsolutePath());
-        LOG.debug("Local mkdir called creating temp. dir at: " +
-            tempD.getAbsolutePath());
+        
+        String localMkdirMsg = "Local mkdir called creating temp. dir at: " + tempD.getAbsolutePath();
+        System.out.println(localMkdirMsg);
+        LOG.debug(localMkdirMsg);
 
         Configuration conf = new Configuration();
         FileSystem fs = FileSystem.get(destination.toUri(), conf);
@@ -244,13 +248,13 @@ public class GitMain extends LauncherMain {
           srcs.add(new Path(p.toString()));
         }
 
-        System.out.println("Finished cloning to local");
-        LOG.debug("Finished cloning to local");
+        System.out.println(finishedCloneingMsg);
+        LOG.debug(finishedCloneingMsg);
 
         fs.mkdirs(destination);
         fs.copyFromLocalFile(false, true, srcs.toArray(new Path[0]), destination);
-        System.out.println("Finished the copy to " + destination.toString() + "!");
-        LOG.debug("Finished the copy to " + destination.toString() + "!");
+        System.out.println(finishedCopyMsg);
+        LOG.debug(finishedCopyMsg);
         return(destination.toString());
     }
 
@@ -272,6 +276,8 @@ public class GitMain extends LauncherMain {
             throw new GitMainException("Action Configuration does not have "
                     + GitActionExecutor.WORKFLOW_ID + " property");
         }
+        GitActionExecutor.verifyPropertyNotNull(actionConf.get(GitActionExecutor.WORKFLOW_ID), GitActionExecutor.WORKFLOW_ID,
+                true);
         // CALLBACK_URL
         callbackUrl = actionConf.get(GitActionExecutor.CALLBACK_URL);
         if (callbackUrl == null) {
