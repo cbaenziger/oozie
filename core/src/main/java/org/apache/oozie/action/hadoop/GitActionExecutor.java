@@ -98,7 +98,8 @@ public class GitActionExecutor extends JavaActionExecutor {
         registerError(JDOMException.class.getName(), ActionExecutorException.ErrorType.ERROR, "GIT007");
         registerError(FileNotFoundException.class.getName(), ActionExecutorException.ErrorType.ERROR, "GIT008");
         registerError(IOException.class.getName(), ActionExecutorException.ErrorType.TRANSIENT, "GIT009");
-        // GIT010 reserved for actionXml parsing
+        // GIT010 reserved for actionXml parsing in GitActionExecutor
+        // GIT011 reserved for actionXml parsing in GitMain
 
     }
     
@@ -176,11 +177,11 @@ public class GitActionExecutor extends JavaActionExecutor {
          * @param  getTextTrim if we should run the getTextTrim() method on the value verified
          * @return             true if value was non-null
          */
-        public static boolean verifyPropertyNotNull(Object value, String displayName,
+        public boolean verifyPropertyNotNull(Object value, String displayName,
                                                     boolean fatal) throws ActionExecutorException {
             if (value == null) {
                 if (fatal == true)
-                    throw new ActionExecutorException(ErrorType.ERROR, "GIT010",
+                    throw new ActionExecutorException(ErrorType.ERROR, exceptionCode,
                             "Action Configuration does not have " + displayName + " property");
                 return(false);
             } else {
@@ -190,7 +191,7 @@ public class GitActionExecutor extends JavaActionExecutor {
         
         /**
          * Calls helper function to verify value not null and throw an exception if so.
-         * Otherwise, set acctionConf value displayName to value
+         * Otherwise, set actionConf value displayName to value
          */
         public void verifyPropertyNotNullFatal(String value, String displayName) throws ActionExecutorException {
             if (verifyPropertyNotNull(value, displayName, true)) {
@@ -200,7 +201,7 @@ public class GitActionExecutor extends JavaActionExecutor {
         
         /**
          * Calls helper function to verify value not null and throw an exception if so.
-         * Otherwise, set acctionConf value displayName to XML trimmed text value
+         * Otherwise, set actionConf value displayName to XML trimmed text value
          */
         public void verifyPropertyNotNullFatalTT(Element value, String displayName) throws ActionExecutorException {
             if (verifyPropertyNotNull(value, displayName, true)) {
@@ -210,7 +211,7 @@ public class GitActionExecutor extends JavaActionExecutor {
         
         /**
          * Calls helper function to verify value not null but does not throw an exception if null.
-         * Otherwise, sets acctionConf value displayName to XML trimmed text value
+         * Otherwise, sets actionConf value displayName to XML trimmed text value
          */
         public void verifyPropertyNotNullConfOnlyTT(Element value, String displayName) {
             try {
@@ -220,6 +221,16 @@ public class GitActionExecutor extends JavaActionExecutor {
             } catch (ActionExecutorException e) {
                 // should never land here since we ask for verifyPropertyNotNull to not throw -- swallow here
             }
+        }
+        
+        /**
+         * Calls helper function to verify value not null and throw an exception if so.
+         * Otherwise, returns actionConf value
+         * @param value - actionConf value to return
+         */
+        public String returnActionConfNotNullFatal(String value) throws ActionExecutorException {
+            verifyPropertyNotNull(actionConf.getTrimmed(value), value, true);
+            return(actionConf.getTrimmed(value));
         }
     }
 }

@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.oozie.action.hadoop.LauncherMain;
 
+import org.apache.oozie.action.ActionExecutorException;
 import org.apache.oozie.action.hadoop.GitActionExecutor;
 import org.apache.oozie.util.XLog;
 
@@ -132,10 +133,9 @@ public class GitMain extends LauncherMain {
      * @return the location to where the key was saved
      */
     private File getKeyFromFS(Path location) throws IOException, URISyntaxException {
-        String mkdirMsg = "Local mkdir called creating temp. dir at: " + key.getAbsolutePath();
         String keyCopyMsg = "Copied keys to local container!";
         
-        Configuration conf = new Configuration();
+    	Configuration conf = new Configuration();
         FileSystem fs = FileSystem.newInstance(new URI(nameNode), conf);
         File key = new File(Files.createTempDirectory(
             Paths.get("."),
@@ -144,7 +144,8 @@ public class GitMain extends LauncherMain {
                 .asFileAttribute(PosixFilePermissions
                    .fromString("rwx------")))
             .toString());
-
+        
+        String mkdirMsg = "Local mkdir called creating temp. dir at: " + key.getAbsolutePath();
         System.out.println(mkdirMsg);
         LOG.debug(mkdirMsg);
 
@@ -203,7 +204,7 @@ public class GitMain extends LauncherMain {
         try {
             cloneCommand.call();
         } catch (GitAPIException e) {
-            String unableToCloneMsg = "Unable to clone Git repo: " + e
+            String unableToCloneMsg = "Unable to clone Git repo: " + e;
             e.printStackTrace();
             LOG.error(unableToCloneMsg);
             throw new RuntimeException(unableToCloneMsg);
@@ -264,44 +265,24 @@ public class GitMain extends LauncherMain {
      * @param Oozie action configuration
      * @throws RuntimeException upon any parse failure
      */
-    private void parseActionConfiguration(Configuration actionConf) throws GitMainException {
+    private void parseActionConfiguration(Configuration actionConf) throws GitMainException, ActionExecutorException {
         // APP_NAME
-        GitActionExecutor.verifyPropertyNotNull(actionConf.get(GitActionExecutor.APP_NAME), GitActionExecutor.APP_NAME,
-                true);
-        appName = actionConf.get(GitActionExecutor.APP_NAME);
-
+    	GitActionExecutor.VerifyActionConf confChecker = new GitActionExecutor.VerifyActionConf(actionConf,"GIT011");
+    	appName = confChecker.returnActionConfNotNullFatal(GitActionExecutor.APP_NAME);
         //WORKFLOW_ID
-        workflowId = actionConf.get(GitActionExecutor.WORKFLOW_ID);
-        if (workflowId == null) {
-            throw new GitMainException("Action Configuration does not have "
-                    + GitActionExecutor.WORKFLOW_ID + " property");
-        }
-        GitActionExecutor.verifyPropertyNotNull(actionConf.get(GitActionExecutor.WORKFLOW_ID), GitActionExecutor.WORKFLOW_ID,
-                true);
+    	workflowId = confChecker.returnActionConfNotNullFatal(GitActionExecutor.WORKFLOW_ID);
+
         // CALLBACK_URL
-        callbackUrl = actionConf.get(GitActionExecutor.CALLBACK_URL);
-        if (callbackUrl == null) {
-            throw new GitMainException("Action Configuration does not have "
-                    + GitActionExecutor.CALLBACK_URL + " property");
-        }
+        callbackUrl = confChecker.returnActionConfNotNullFatal(GitActionExecutor.CALLBACK_URL);
+
         // JOB_TRACKER
-        jobTracker = actionConf.get(GitActionExecutor.JOB_TRACKER);
-        if (jobTracker == null) {
-            throw new GitMainException("Action Configuration does not have "
-                    + GitActionExecutor.JOB_TRACKER + " property");
-        }
+        jobTracker = confChecker.returnActionConfNotNullFatal(GitActionExecutor.JOB_TRACKER);
+
         //NAME_NODE
-        nameNode = actionConf.get(GitActionExecutor.NAME_NODE);
-        if (nameNode == null) {
-            throw new GitMainException("Action Configuration does not have "
-                    + GitActionExecutor.NAME_NODE + " property");
-        }
+        nameNode = confChecker.returnActionConfNotNullFatal(GitActionExecutor.NAME_NODE);
+
         // DESTINATION_URI
-        destinationUri = actionConf.get(GitActionExecutor.DESTINATION_URI);
-        if (destinationUri == null) {
-            throw new GitMainException("Action Configuration does not have "
-                    + GitActionExecutor.DESTINATION_URI + " property");
-        }
+        destinationUri = confChecker.returnActionConfNotNullFatal(GitActionExecutor.DESTINATION_URI);
         try {
             FileSystem fs = FileSystem.get(new URI(destinationUri), actionConf);
             destinationUri = fs.makeQualified(new Path(destinationUri)).toString();
@@ -311,15 +292,11 @@ public class GitMain extends LauncherMain {
                     + e.toString());
         } catch (IOException e) {
             throw new GitMainException("Action Configuration does not have "
-                    + "a filesystem for URI " + GitActionExecutor.DESTINATION_URI + "exception "
+                    + "a valid filesystem for URI " + GitActionExecutor.DESTINATION_URI + "exception "
                     + e.toString());
         }
         // GIT_URI
-        gitUri = actionConf.get(GitActionExecutor.GIT_URI);
-        if (gitUri == null) {
-            throw new GitMainException("Action Configuration has a null " +
-                    GitActionExecutor.GIT_URI + " property");
-        }
+        gitUri = confChecker.returnActionConfNotNullFatal(GitActionExecutor.GIT_URI);
         try {
             if (new URI(gitUri).getScheme() == null) {
               throw new GitMainException("Action Configuration does not have "
@@ -336,17 +313,9 @@ public class GitMain extends LauncherMain {
         // KEY_PATH
         keyPath = actionConf.get(GitActionExecutor.KEY_PATH);
         // ACTION_TYPE
-        actionType = actionConf.get(GitActionExecutor.ACTION_TYPE);
-        if (actionType == null) {
-            throw new GitMainException("Action Configuration does not have "
-                    + GitActionExecutor.ACTION_TYPE + " property");
-        }
+        actionType = confChecker.returnActionConfNotNullFatal(GitActionExecutor.ACTION_TYPE);
         // ACTION_NAME
-        actionName = actionConf.get(GitActionExecutor.ACTION_NAME);
-        if (actionName == null) {
-            throw new GitMainException("Action Configuration does not have "
-                    + GitActionExecutor.ACTION_NAME + " property");
-        }
+        actionName = confChecker.returnActionConfNotNullFatal(GitActionExecutor.ACTION_NAME);
     }
     
     /**
