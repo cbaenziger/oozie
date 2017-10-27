@@ -18,6 +18,10 @@
 
 package org.apache.oozie.action.email;
 
+// XXX
+import java.util.Map;
+import org.apache.oozie.service.ELService;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -172,14 +176,26 @@ public class EmailActionExecutor extends ActionExecutor {
 
         // Allow ELExpressions in from configuration (e.g. to set user_name@domain)
         String fromConf = ConfigurationService.get(EMAIL_SMTP_FROM);
+        LOG.warn("XXX1 " + fromConf);
         try {
-            from = context.getELEvaluator().evaluate(fromConf, String.class);
+            LOG.warn("XXX1.5 " + from);
+            fromConf = "${wf:user()}@foo.bar";
+            ELEvaluator eval = Services.get().get(ELService.class).createEvaluator("workflow");
+
+            from = eval.evaluate(fromConf, String.class);
+            //ELEvaluator eval = new ELEvaluator();
+            //for (Map.Entry<String, String> entry : Element) {
+            //    eval.setVariable(entry.getKey(), entry.getValue().trim());
+            //}
+            LOG.warn("XXX2 " + from);
         }
         catch (ELEvaluationException ex) {
+            LOG.warn("XXX3 " + ex.getMessage());
             throw new ActionExecutorException(ActionExecutorException.ErrorType.TRANSIENT, "EL_EVAL_ERROR", ex
                     .getMessage(), ex);
         }
         catch (Exception ex) {
+            LOG.warn("XXX4 " + ex.getMessage());
             context.setErrorInfo("EL_ERROR", ex.getMessage());
         }
 
