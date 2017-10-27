@@ -21,6 +21,7 @@ package org.apache.oozie.action.email;
 // XXX
 import java.util.Map;
 import org.apache.oozie.service.ELService;
+import org.apache.oozie.DagELFunctions;
 
 import java.io.File;
 import java.io.IOException;
@@ -179,9 +180,10 @@ public class EmailActionExecutor extends ActionExecutor {
         LOG.warn("XXX1 " + fromConf);
         try {
             LOG.warn("XXX1.5 " + from);
+            LOG.warn(context.getWorkflow().getConf().toString());
             fromConf = "${wf:user()}@foo.bar";
             ELEvaluator eval = Services.get().get(ELService.class).createEvaluator("workflow");
-
+            DagELFunctions.configureEvaluator(eval, context.getWorkflow(), context.getAction());
             from = eval.evaluate(fromConf, String.class);
             //ELEvaluator eval = new ELEvaluator();
             //for (Map.Entry<String, String> entry : Element) {
@@ -239,6 +241,7 @@ public class EmailActionExecutor extends ActionExecutor {
         List<InternetAddress> bccAddrs = new ArrayList<InternetAddress>(bcc.length);
 
         try {
+            LOG.warn("XXX9 " + from);
             fromAddr = new InternetAddress(from);
             message.setFrom(fromAddr);
         } catch (AddressException e) {
