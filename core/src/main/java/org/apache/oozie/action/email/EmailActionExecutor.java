@@ -56,6 +56,8 @@ import org.apache.oozie.service.ConfigurationService;
 import org.apache.oozie.service.HadoopAccessorException;
 import org.apache.oozie.service.Services;
 import org.apache.oozie.service.HadoopAccessorService;
+import org.apache.oozie.util.ELEvaluationException;
+import org.apache.oozie.util.ELEvaluator;
 import org.apache.oozie.util.XLog;
 import org.apache.oozie.util.XmlUtils;
 import org.jdom.Element;
@@ -119,9 +121,10 @@ public class EmailActionExecutor extends ActionExecutor {
     protected void validateAndMail(Context context, Element element) throws ActionExecutorException {
         // The XSD does the min/max occurrence validation for us.
         Namespace ns = element.getNamespace();
+        String from = "";
         String tos[] = new String[0];
         String ccs[] = new String[0];
-        String bccs[] ;
+        String bccs[];
         String subject = "";
         String body = "";
         String attachments[] = new String[0];
@@ -167,16 +170,24 @@ public class EmailActionExecutor extends ActionExecutor {
             contentType = DEFAULT_CONTENT_TYPE;
         }
 
+        // Allow ELExpressions in from configuration (e.g. to set user_name@domain)
+        String fromConf = ConfigurationService.get(EMAIL_SMTP_FROM);
+        try {
+            from = context.getELEvaluator().evaluate(fromConf, String.class);
+        }
+        catch (ELEvaluationException ex) {
+            throw new ActionExecutorException(ActionExecutorException.ErrorType.TRANSIENT, "EL_EVAL_ERROR", ex
+                    .getMessage(), ex);
+        }
+        catch (Exception ex) {
+            context.setErrorInfo("EL_ERROR", ex.getMessage());
+        }
+
         // All good - lets try to mail!
-        email(tos, ccs, bccs, subject, body, attachments, contentType, context.getWorkflow().getUser());
+        email(from, tos, ccs, bccs, subject, body, attachments, contentType, context.getWorkflow().getUser());
     }
 
-    public void email(String[] to, String[] cc, String subject, String body, String[] attachments,
-                      String contentType, String user) throws ActionExecutorException {
-        email(to, cc, new String[0], subject, body, attachments, contentType, user);
-    }
-
-    public void email(String[] to, String[] cc, String[] bcc, String subject, String body, String[] attachments,
+    public void email(String from, String[] to, String[] cc, String[] bcc, String subject, String body, String[] attachments,
                       String contentType, String user) throws ActionExecutorException {
         // Get mailing server details.
         String smtpHost = ConfigurationService.get(EMAIL_SMTP_HOST);
@@ -184,7 +195,6 @@ public class EmailActionExecutor extends ActionExecutor {
         Boolean smtpAuthBool = ConfigurationService.getBoolean(EMAIL_SMTP_AUTH);
         String smtpUser = ConfigurationService.get(EMAIL_SMTP_USER);
         String smtpPassword = ConfigurationService.getPassword(EMAIL_SMTP_PASS, "");
-        String fromAddr = ConfigurationService.get(EMAIL_SMTP_FROM);
         Integer timeoutMillisInt = ConfigurationService.getInt(EMAIL_SMTP_SOCKET_TIMEOUT_MS);
 
         Properties properties = new Properties();
@@ -207,14 +217,14 @@ public class EmailActionExecutor extends ActionExecutor {
         }
 
         Message message = new MimeMessage(session);
-        InternetAddress from;
+        InternetAddress fromAddr;
         List<InternetAddress> toAddrs = new ArrayList<InternetAddress>(to.length);
         List<InternetAddress> ccAddrs = new ArrayList<InternetAddress>(cc.length);
         List<InternetAddress> bccAddrs = new ArrayList<InternetAddress>(bcc.length);
 
         try {
-            from = new InternetAddress(fromAddr);
-            message.setFrom(from);
+            fromAddr = new InternetAddress(from);
+            message.setFrom(fromAddr);
         } catch (AddressException e) {
             throw new ActionExecutorException(ErrorType.ERROR, "EM002", "Bad from address specified in ${oozie.email.from.address}.", e);
         } catch (MessagingException e) {

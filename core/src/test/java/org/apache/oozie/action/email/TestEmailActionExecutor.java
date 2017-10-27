@@ -18,6 +18,8 @@
 
 package org.apache.oozie.action.email;
 
+import org.apache.oozie.util.XLog;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -56,6 +58,7 @@ public class TestEmailActionExecutor extends ActionExecutorTestCase {
     GreenMail server;
     private final static Pattern CHECK_SUBJECT_PATTERN = Pattern.compile("Subject:[^:]*sub");
     private final static Pattern CHECK_TO_PATTERN = Pattern.compile("To:[^:]*abc@oozie.com[^:]*def@oozie.com");
+    private static Pattern CHECK_FROM_PATTERN = Pattern.compile("From:[^:]*oozie@localhost");
     private final static Pattern CHECK_CC_PATTERN = Pattern.compile("Cc:[^:]*ghi@oozie.com[^:]*jkl@oozie.com");
     private final static Pattern CHECK_BCC_PATTERN = Pattern.compile("To:[^:]*nmo@oozie.com[^:]*pqr@oozie.com");
 
@@ -133,6 +136,9 @@ public class TestEmailActionExecutor extends ActionExecutorTestCase {
 
         //Check To
         assertTrue(CHECK_TO_PATTERN.matcher(header).find());
+
+        //Check From
+        assertTrue(CHECK_FROM_PATTERN.matcher(header).find());
 
         //Check CC
         {
@@ -218,6 +224,36 @@ public class TestEmailActionExecutor extends ActionExecutorTestCase {
         }
     }
 
+    public void testFromAddressHandling() throws Exception {
+        EmailActionExecutor email = new EmailActionExecutor();
+        XLog.getLog(getClass()).warn("Test XXX");
+
+        // Test a fixed string
+        Services.get().get(ConfigurationService.class).getConf().set("oozie.email.from.address", "My Cluster's Oozie <tester@example.com>");
+        CHECK_FROM_PATTERN = Pattern.compile("From:[^:]*tester@example.com");
+        Context ctx = createNormalContext("email-action");
+        email.validateAndMail(createNormalContext("email-action"), prepareEmailElement(false, false));
+        checkEmail(server.getReceivedMessages()[0], false, false);
+        XLog.getLog(getClass()).warn(server.getReceivedMessages());
+
+        // Test an EL expression
+        Services.get().get(ConfigurationService.class).getConf().set("oozie.email.from.address", "${wf:user()}+oozie@example.com");
+        CHECK_FROM_PATTERN = Pattern.compile("From:[^:]*" + getTestUser() + "@example.com");
+        email.validateAndMail(createNormalContext("email-action"), prepareEmailElement(false, false));
+        checkEmail(server.getReceivedMessages()[0], false, false);
+
+        // Test a mal-formatted e-mail
+        Services.get().get(ConfigurationService.class).getConf().set("oozie.email.from.address", "notAnyAddressIKnow");
+        CHECK_FROM_PATTERN = Pattern.compile("From:[^:]*" + getTestUser() + "@example.com");
+        try {
+            email.validateAndMail(createNormalContext("email-action"), prepareEmailElement(false, false));
+            fail();
+        } catch (Exception e) {
+            fail();
+            // Validation succeeded.
+        }
+    }
+
     public void testValidation() throws Exception {
         EmailActionExecutor email = new EmailActionExecutor();
 
@@ -257,6 +293,7 @@ public class TestEmailActionExecutor extends ActionExecutorTestCase {
 
         // Multiple <body>s
         try {
+
             email.validateAndMail(ctx, prepareBadElement("body"));
             fail();
         } catch (Exception e) {

@@ -43,6 +43,7 @@ public class AbandonedCoordCheckerService implements Service {
 
     private static final String CONF_PREFIX = Service.CONF_PREFIX + "AbandonedCoordCheckerService.";
     public static final String TO_ADDRESS = CONF_PREFIX + "email.address";
+    public static final String FROM_ADDRESS = CONF_PREFIX + "email.fromAddress";
     private static final String CONTENT_TYPE = "text/html";
     private static final String SUBJECT = "Abandoned Coordinators report";
     public static final String CONF_CHECK_INTERVAL = CONF_PREFIX + "check.interval";
@@ -52,6 +53,7 @@ public class AbandonedCoordCheckerService implements Service {
 
     public static final String CONF_JOB_KILL = CONF_PREFIX + "kill.jobs";
     public static final String OOZIE_BASE_URL = "oozie.base.url";
+    private static String from;
     private static String[] to;
     private static String serverURL;
 
@@ -163,15 +165,20 @@ public class AbandonedCoordCheckerService implements Service {
                 LOG.info(TO_ADDRESS + " is not configured. Not sending email");
                 return;
             }
+            if (from == null || from.isEmpty()) {
+                LOG.info(FROM_ADDRESS + " is not configured. Not sending email");
+                return;
+            }
             EmailActionExecutor email = new EmailActionExecutor();
             String subject = SUBJECT + " for " + serverURL + " at " + DateUtils.formatDateOozieTZ(new Date());
-            email.email(to, new String[0], new String[0], subject, body, null, CONTENT_TYPE, null);
+            email.email(from, to, new String[0], new String[0], subject, body, null, CONTENT_TYPE, null);
         }
     }
 
     @Override
     public void init(Services services) {
         to = ConfigurationService.getStrings(TO_ADDRESS);
+        from = ConfigurationService.get(FROM_ADDRESS);
         int failureLen = ConfigurationService.getInt(CONF_FAILURE_LEN);
         boolean shouldKill = ConfigurationService.getBoolean(CONF_JOB_KILL);
         serverURL = ConfigurationService.get(OOZIE_BASE_URL);
