@@ -22,6 +22,9 @@ package org.apache.oozie.action.email;
 import java.util.Map;
 import org.apache.oozie.service.ELService;
 import org.apache.oozie.DagELFunctions;
+import org.apache.oozie.WorkflowActionBean;
+import org.apache.oozie.WorkflowJobBean;
+import com.google.common.annotations.VisibleForTesting;
 
 import java.io.File;
 import java.io.IOException;
@@ -109,12 +112,41 @@ public class EmailActionExecutor extends ActionExecutor {
         super.initActionType();
     }
 
+    @VisibleForTesting
     @Override
     public void start(Context context, WorkflowAction action) throws ActionExecutorException {
         try {
             context.setStartData("-", "-", "-");
+            LOG.warn("XXX0 " + action.getConf());
             Element actionXml = XmlUtils.parseXml(action.getConf());
-            validateAndMail(context, actionXml);
+            
+            String from = "";
+            // Allow ELExpressions in from configuration (e.g. to set user_name@domain)
+            String fromConf = ConfigurationService.get(EMAIL_SMTP_FROM);
+            LOG.warn("XXX1 " + fromConf);
+            try {
+                LOG.warn("XXX1.5 " + from);
+                LOG.warn(context.getWorkflow().getConf().toString());
+                ELEvaluator eval = Services.get().get(ELService.class).createEvaluator("workflow");
+                DagELFunctions.configureEvaluator(eval, (WorkflowJobBean) context.getWorkflow(), (WorkflowActionBean) action);
+                from = eval.evaluate(fromConf, String.class);
+                //ELEvaluator eval = new ELEvaluator();
+                //for (Map.Entry<String, String> entry : Element) {
+                //    eval.setVariable(entry.getKey(), entry.getValue().trim());
+                //}
+                LOG.warn("XXX2 " + from);
+            }
+            catch (ELEvaluationException ex) {
+                LOG.warn("XXX3 " + ex.getMessage());
+                throw new ActionExecutorException(ActionExecutorException.ErrorType.TRANSIENT, "EL_EVAL_ERROR", ex
+                        .getMessage(), ex);
+            }
+            catch (Exception ex) {
+                LOG.warn("XXX4 " + ex.getMessage());
+                context.setErrorInfo("EL_ERROR", ex.getMessage());
+            }
+            
+            validateAndMail(context, actionXml, from);
             context.setExecutionData("OK", null);
         }
         catch (Exception ex) {
@@ -123,10 +155,9 @@ public class EmailActionExecutor extends ActionExecutor {
     }
 
     @SuppressWarnings("unchecked")
-    protected void validateAndMail(Context context, Element element) throws ActionExecutorException {
+    protected void validateAndMail(Context context, Element element, String from) throws ActionExecutorException {
         // The XSD does the min/max occurrence validation for us.
         Namespace ns = element.getNamespace();
-        String from = "";
         String tos[] = new String[0];
         String ccs[] = new String[0];
         String bccs[];
@@ -134,7 +165,6 @@ public class EmailActionExecutor extends ActionExecutor {
         String body = "";
         String attachments[] = new String[0];
         String contentType;
-        Element child = null;
 
         // <to> - One ought to exist.
         String text = element.getChildTextTrim(TO, ns);
@@ -173,32 +203,6 @@ public class EmailActionExecutor extends ActionExecutor {
         contentType = element.getChildTextTrim(CONTENT_TYPE, ns);
         if (contentType == null || contentType.isEmpty()) {
             contentType = DEFAULT_CONTENT_TYPE;
-        }
-
-        // Allow ELExpressions in from configuration (e.g. to set user_name@domain)
-        String fromConf = ConfigurationService.get(EMAIL_SMTP_FROM);
-        LOG.warn("XXX1 " + fromConf);
-        try {
-            LOG.warn("XXX1.5 " + from);
-            LOG.warn(context.getWorkflow().getConf().toString());
-            fromConf = "${wf:user()}@foo.bar";
-            ELEvaluator eval = Services.get().get(ELService.class).createEvaluator("workflow");
-            DagELFunctions.configureEvaluator(eval, context.getWorkflow(), context.getAction());
-            from = eval.evaluate(fromConf, String.class);
-            //ELEvaluator eval = new ELEvaluator();
-            //for (Map.Entry<String, String> entry : Element) {
-            //    eval.setVariable(entry.getKey(), entry.getValue().trim());
-            //}
-            LOG.warn("XXX2 " + from);
-        }
-        catch (ELEvaluationException ex) {
-            LOG.warn("XXX3 " + ex.getMessage());
-            throw new ActionExecutorException(ActionExecutorException.ErrorType.TRANSIENT, "EL_EVAL_ERROR", ex
-                    .getMessage(), ex);
-        }
-        catch (Exception ex) {
-            LOG.warn("XXX4 " + ex.getMessage());
-            context.setErrorInfo("EL_ERROR", ex.getMessage());
         }
 
         // All good - lets try to mail!

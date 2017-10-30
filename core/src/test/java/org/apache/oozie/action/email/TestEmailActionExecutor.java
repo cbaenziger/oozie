@@ -20,6 +20,9 @@ package org.apache.oozie.action.email;
 
 import org.apache.oozie.util.XLog;
 
+//XXX
+import org.jdom.output.XMLOutputter;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -37,6 +40,7 @@ import javax.mail.internet.MimeMessage;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.oozie.client.WorkflowAction;
 import org.apache.oozie.WorkflowActionBean;
 import org.apache.oozie.WorkflowJobBean;
 import org.apache.oozie.action.ActionExecutorException;
@@ -58,10 +62,11 @@ public class TestEmailActionExecutor extends ActionExecutorTestCase {
     GreenMail server;
     private final static Pattern CHECK_SUBJECT_PATTERN = Pattern.compile("Subject:[^:]*sub");
     private final static Pattern CHECK_TO_PATTERN = Pattern.compile("To:[^:]*abc@oozie.com[^:]*def@oozie.com");
-    private static Pattern CHECK_FROM_PATTERN = Pattern.compile("From:[^:]*oozie@localhost");
+    private final static String EMAIL_USER = "test@example.com";
+    private static Pattern CHECK_FROM_PATTERN = Pattern.compile("From:[^:]*" + EMAIL_USER);
     private final static Pattern CHECK_CC_PATTERN = Pattern.compile("Cc:[^:]*ghi@oozie.com[^:]*jkl@oozie.com");
     private final static Pattern CHECK_BCC_PATTERN = Pattern.compile("To:[^:]*nmo@oozie.com[^:]*pqr@oozie.com");
-
+    
     @Override
     protected void setUp() throws Exception {
         super.setUp();
@@ -88,6 +93,8 @@ public class TestEmailActionExecutor extends ActionExecutorTestCase {
 
 
         WorkflowJobBean wf = createBaseWorkflow(protoConf, "email-action");
+        wf.setUser(getTestUser());
+        
         WorkflowActionBean action = (WorkflowActionBean) wf.getActions().get(0);
         action.setType(ae.getType());
         action.setConf(actionXml);
@@ -138,7 +145,7 @@ public class TestEmailActionExecutor extends ActionExecutorTestCase {
         assertTrue(CHECK_TO_PATTERN.matcher(header).find());
 
         //Check From
-        assertTrue(CHECK_FROM_PATTERN.matcher(header).find());
+        assertTrue("XXXJUnit " + CHECK_FROM_PATTERN + "\n" + header, CHECK_FROM_PATTERN.matcher(header).find());
 
         //Check CC
         {
@@ -170,13 +177,17 @@ public class TestEmailActionExecutor extends ActionExecutorTestCase {
 
     public void testDoNormalEmail() throws Exception {
         EmailActionExecutor email = new EmailActionExecutor();
-        email.validateAndMail(createNormalContext("email-action"), prepareEmailElement(false, false));
+        Context emailContext = createNormalContext("email-action");
+        ((WorkflowActionBean) emailContext.getAction()).setConf(new XMLOutputter().outputString(prepareEmailElement(false, false)));
+        email.start(emailContext, emailContext.getAction());
         checkEmail(server.getReceivedMessages()[0], false, false);
     }
 
     public void testDoAuthEmail() throws Exception {
         EmailActionExecutor email = new EmailActionExecutor();
-        email.validateAndMail(createAuthContext("email-action"), prepareEmailElement(true, true));
+        Context emailContext = createNormalContext("email-action");
+        ((WorkflowActionBean) emailContext.getAction()).setConf(new XMLOutputter().outputString(prepareEmailElement(true, true)));
+        email.start(emailContext, emailContext.getAction());
         checkEmail(server.getReceivedMessages()[0], true, true);
     }
 
@@ -206,7 +217,8 @@ public class TestEmailActionExecutor extends ActionExecutorTestCase {
             // Apply a 0.1s timeout to induce a very quick "Read timed out" error
             Services.get().get(ConfigurationService.class).getConf().setInt("oozie.email.smtp.socket.timeout.ms", 100);
             try {
-              email.validateAndMail(ctx, prepareEmailElement(false, false));
+              ((WorkflowActionBean) ctx.getAction()).setConf(new XMLOutputter().outputString(prepareEmailElement(false, false)));
+              email.start(ctx, ctx.getAction());
               fail("Should have failed with a socket timeout error!");
             } catch (Exception e) {
               Throwable rootCause = e;
@@ -227,30 +239,44 @@ public class TestEmailActionExecutor extends ActionExecutorTestCase {
     public void testFromAddressHandling() throws Exception {
         EmailActionExecutor email = new EmailActionExecutor();
         XLog.getLog(getClass()).warn("Test XXX");
-
-        // Test a fixed string
-        Services.get().get(ConfigurationService.class).getConf().set("oozie.email.from.address", "My Cluster's Oozie <tester@example.com>");
-        CHECK_FROM_PATTERN = Pattern.compile("From:[^:]*tester@example.com");
-        Context ctx = createNormalContext("email-action");
-        email.validateAndMail(createNormalContext("email-action"), prepareEmailElement(false, false));
-        checkEmail(server.getReceivedMessages()[0], false, false);
-        XLog.getLog(getClass()).warn(server.getReceivedMessages());
-
-        // Test an EL expression
-        Services.get().get(ConfigurationService.class).getConf().set("oozie.email.from.address", "${wf:user()}+oozie@example.com");
-        CHECK_FROM_PATTERN = Pattern.compile("From:[^:]*" + getTestUser() + "@example.com");
-        email.validateAndMail(createNormalContext("email-action"), prepareEmailElement(false, false));
-        checkEmail(server.getReceivedMessages()[0], false, false);
+        String default_email_address = Services.get().get(ConfigurationService.class).getConf().get("oozie.email.from.address");
 
         // Test a mal-formatted e-mail
-        Services.get().get(ConfigurationService.class).getConf().set("oozie.email.from.address", "notAnyAddressIKnow");
-        CHECK_FROM_PATTERN = Pattern.compile("From:[^:]*" + getTestUser() + "@example.com");
+        Services.get().get(ConfigurationService.class).getConf().set("oozie.email.from.address", "Broken#!;|Address");
+        Context ctx = createNormalContext("email-action");
         try {
-            email.validateAndMail(createNormalContext("email-action"), prepareEmailElement(false, false));
+            ((WorkflowActionBean) ctx.getAction()).setConf(new XMLOutputter().outputString(prepareEmailElement(false, false)));
+            email.start(ctx, ctx.getAction());
             fail();
         } catch (Exception e) {
-            fail();
             // Validation succeeded.
+        }
+        
+        // Below tests twiddle CHECK_FROM_PATTERN
+        Pattern default_check_from_pattern = CHECK_FROM_PATTERN;
+        
+        // Test a fixed string
+        try {
+            Services.get().get(ConfigurationService.class).getConf().set("oozie.email.from.address", "My Cluster's Oozie <special@example.com>");
+            ctx = createNormalContext("email-action");
+            CHECK_FROM_PATTERN = Pattern.compile("From:[^:]*special@example.com");
+            ((WorkflowActionBean) ctx.getAction()).setConf(new XMLOutputter().outputString(prepareEmailElement(false, false)));
+            email.start(ctx, ctx.getAction());
+            checkEmail(server.getReceivedMessages()[0], false, false);
+        } finally {
+            CHECK_FROM_PATTERN = default_check_from_pattern;
+        }
+
+        // Test an EL expression
+        try {
+            Services.get().get(ConfigurationService.class).getConf().set("oozie.email.from.address", "${wf:user()}@oozie");
+            ctx = createNormalContext("email-action");
+            CHECK_FROM_PATTERN = Pattern.compile("From:[^:]*" + getTestUser() + "@oozie");
+            ((WorkflowActionBean) ctx.getAction()).setConf(new XMLOutputter().outputString(prepareEmailElement(false, false)));
+            email.start(ctx, ctx.getAction());
+            checkEmail(server.getReceivedMessages()[0], false, false);
+        } finally {
+            CHECK_FROM_PATTERN = default_check_from_pattern;
         }
     }
 
@@ -261,7 +287,7 @@ public class TestEmailActionExecutor extends ActionExecutorTestCase {
 
         // Multiple <to>s
         try {
-            email.validateAndMail(ctx, prepareBadElement("to"));
+            email.validateAndMail(ctx, prepareBadElement("to"), EMAIL_USER);
             fail();
         } catch (Exception e) {
             // Validation succeeded.
@@ -269,7 +295,7 @@ public class TestEmailActionExecutor extends ActionExecutorTestCase {
 
         // Multiple <cc>s
         try {
-            email.validateAndMail(ctx, prepareBadElement("cc"));
+            email.validateAndMail(ctx, prepareBadElement("cc"), EMAIL_USER);
             fail();
         } catch (Exception e) {
             // Validation succeeded.
@@ -277,7 +303,7 @@ public class TestEmailActionExecutor extends ActionExecutorTestCase {
 
         // Multiple <bcc>s
         try {
-            email.validateAndMail(ctx, prepareBadElement("bcc"));
+            email.validateAndMail(ctx, prepareBadElement("bcc"), EMAIL_USER);
             fail();
         } catch (Exception e) {
             // Validation succeeded.
@@ -285,7 +311,7 @@ public class TestEmailActionExecutor extends ActionExecutorTestCase {
 
         // Multiple <subject>s
         try {
-            email.validateAndMail(ctx, prepareBadElement("subject"));
+            email.validateAndMail(ctx, prepareBadElement("subject"), EMAIL_USER);
             fail();
         } catch (Exception e) {
             // Validation succeeded.
@@ -294,7 +320,7 @@ public class TestEmailActionExecutor extends ActionExecutorTestCase {
         // Multiple <body>s
         try {
 
-            email.validateAndMail(ctx, prepareBadElement("body"));
+            email.validateAndMail(ctx, prepareBadElement("body"), EMAIL_USER);
             fail();
         } catch (Exception e) {
             // Validation succeeded.
@@ -303,7 +329,7 @@ public class TestEmailActionExecutor extends ActionExecutorTestCase {
 
     public void testContentTypeDefault() throws Exception {
         EmailActionExecutor email = new EmailActionExecutor();
-        email.validateAndMail(createAuthContext("email-action"), prepareEmailElement(true, true));
+        email.validateAndMail(createAuthContext("email-action"), prepareEmailElement(true, true), EMAIL_USER);
         checkEmail(server.getReceivedMessages()[0], true, true);
         assertTrue(server.getReceivedMessages()[0].getContentType().contains("text/plain"));
     }
@@ -317,7 +343,7 @@ public class TestEmailActionExecutor extends ActionExecutorTestCase {
         elem.append("<body>&lt;body&gt; This is a test mail &lt;/body&gt;</body>");
         elem.append("</email>");
         EmailActionExecutor emailContnetType = new EmailActionExecutor();
-        emailContnetType.validateAndMail(createAuthContext("email-action"), XmlUtils.parseXml(elem.toString()));
+        emailContnetType.validateAndMail(createAuthContext("email-action"), XmlUtils.parseXml(elem.toString()), EMAIL_USER);
         assertEquals("<body> This is a test mail </body>", GreenMailUtil.getBody(server.getReceivedMessages()[0]));
         assertTrue(server.getReceivedMessages()[0].getContentType().contains("text/html"));
     }
@@ -403,7 +429,7 @@ public class TestEmailActionExecutor extends ActionExecutorTestCase {
         elem.append("<attachment>").append(attachtag).append("</attachment>");
         elem.append("</email>");
         EmailActionExecutor emailExecutor = new EmailActionExecutor();
-        emailExecutor.validateAndMail(createAuthContext("email-action"), XmlUtils.parseXml(elem.toString()));
+        emailExecutor.validateAndMail(createAuthContext("email-action"), XmlUtils.parseXml(elem.toString()), EMAIL_USER);
     }
 
     @Override
