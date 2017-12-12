@@ -18,8 +18,6 @@
 
 package org.apache.oozie.action.email;
 
-// XXX
-import java.util.Map;
 import org.apache.oozie.service.ELService;
 import org.apache.oozie.DagELFunctions;
 import org.apache.oozie.WorkflowActionBean;
@@ -117,32 +115,21 @@ public class EmailActionExecutor extends ActionExecutor {
     public void start(Context context, WorkflowAction action) throws ActionExecutorException {
         try {
             context.setStartData("-", "-", "-");
-            LOG.warn("XXX0 " + action.getConf());
             Element actionXml = XmlUtils.parseXml(action.getConf());
             
             String from = "";
             // Allow ELExpressions in from configuration (e.g. to set user_name@domain)
             String fromConf = ConfigurationService.get(EMAIL_SMTP_FROM);
-            LOG.warn("XXX1 " + fromConf);
             try {
-                LOG.warn("XXX1.5 " + from);
-                LOG.warn(context.getWorkflow().getConf().toString());
                 ELEvaluator eval = Services.get().get(ELService.class).createEvaluator("workflow");
                 DagELFunctions.configureEvaluator(eval, (WorkflowJobBean) context.getWorkflow(), (WorkflowActionBean) action);
                 from = eval.evaluate(fromConf, String.class);
-                //ELEvaluator eval = new ELEvaluator();
-                //for (Map.Entry<String, String> entry : Element) {
-                //    eval.setVariable(entry.getKey(), entry.getValue().trim());
-                //}
-                LOG.warn("XXX2 " + from);
             }
             catch (ELEvaluationException ex) {
-                LOG.warn("XXX3 " + ex.getMessage());
                 throw new ActionExecutorException(ActionExecutorException.ErrorType.TRANSIENT, "EL_EVAL_ERROR", ex
                         .getMessage(), ex);
             }
             catch (Exception ex) {
-                LOG.warn("XXX4 " + ex.getMessage());
                 context.setErrorInfo("EL_ERROR", ex.getMessage());
             }
             
@@ -245,7 +232,6 @@ public class EmailActionExecutor extends ActionExecutor {
         List<InternetAddress> bccAddrs = new ArrayList<InternetAddress>(bcc.length);
 
         try {
-            LOG.warn("XXX9 " + from);
             fromAddr = new InternetAddress(from);
             message.setFrom(fromAddr);
         } catch (AddressException e) {

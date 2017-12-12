@@ -18,9 +18,6 @@
 
 package org.apache.oozie.action.email;
 
-import org.apache.oozie.util.XLog;
-
-//XXX
 import org.jdom.output.XMLOutputter;
 
 import java.io.BufferedWriter;
@@ -40,7 +37,6 @@ import javax.mail.internet.MimeMessage;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.oozie.client.WorkflowAction;
 import org.apache.oozie.WorkflowActionBean;
 import org.apache.oozie.WorkflowJobBean;
 import org.apache.oozie.action.ActionExecutorException;
@@ -145,7 +141,7 @@ public class TestEmailActionExecutor extends ActionExecutorTestCase {
         assertTrue(CHECK_TO_PATTERN.matcher(header).find());
 
         //Check From
-        assertTrue("XXXJUnit " + CHECK_FROM_PATTERN + "\n" + header, CHECK_FROM_PATTERN.matcher(header).find());
+        assertTrue("Looking for from pattern: " + CHECK_FROM_PATTERN + "\n" + header, CHECK_FROM_PATTERN.matcher(header).find());
 
         //Check CC
         {
@@ -182,12 +178,6 @@ public class TestEmailActionExecutor extends ActionExecutorTestCase {
         ((WorkflowActionBean) emailContext.getAction()).setConf(new XMLOutputter().outputString(prepareEmailElement(false, false)));
         email.start(emailContext, emailContext.getAction());
         MimeMessage[] messages = server.getReceivedMessages();
-        XLog.getLog(getClass()).warn("Test msgs XXX:" + messages.length);
-        for (MimeMessage m : messages) {
-            for (javax.mail.Address f : m.getFrom()) {
-              XLog.getLog(getClass()).warn(f);
-          }
-        }
         checkEmail(messages[messages.length-1], false, false);
     }
 
@@ -198,10 +188,6 @@ public class TestEmailActionExecutor extends ActionExecutorTestCase {
         ((WorkflowActionBean) emailContext.getAction()).setConf(new XMLOutputter().outputString(prepareEmailElement(true, true)));
         email.start(emailContext, emailContext.getAction());
         MimeMessage[] messages = server.getReceivedMessages();
-        XLog.getLog(getClass()).warn("Test msgs XXX:" + messages.length);
-        for (MimeMessage m : messages) {
-            XLog.getLog(getClass()).warn(m.getFrom()[0]);
-        }
         checkEmail(messages[messages.length-1], true, true);
     }
 
@@ -252,7 +238,6 @@ public class TestEmailActionExecutor extends ActionExecutorTestCase {
 
     public void testFromAddressHandling() throws Exception {
         EmailActionExecutor email = new EmailActionExecutor();
-        XLog.getLog(getClass()).warn("Test XXX");
         
         // All tests twiddle oozie.email.from.address
         String default_email_address = Services.get().get(ConfigurationService.class).getConf().get("oozie.email.from.address");
