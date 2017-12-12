@@ -81,7 +81,7 @@ public class TestEmailActionExecutor extends ActionExecutorTestCase {
         // Services.get().get(ConfigurationService.class).getConf().set("oozie.email.smtp.host", "localhost");
         // Use default from address, 'oozie@localhost'.
         // Hence, do not set the from address conf.
-        // Services.get().get(ConfigurationService.class).getConf().set("oozie.email.from.address", "oozie@localhost");
+        Services.get().get(ConfigurationService.class).getConf().set("oozie.email.smtp.username", EMAIL_USER);
 
         // Disable auth tests by default.
         Services.get().get(ConfigurationService.class).getConf().setBoolean("oozie.email.smtp.auth", false);
@@ -107,7 +107,7 @@ public class TestEmailActionExecutor extends ActionExecutorTestCase {
 
         // Override and enable auth.
         Services.get().get(ConfigurationService.class).getConf().setBoolean("oozie.email.smtp.auth", true);
-        Services.get().get(ConfigurationService.class).getConf().set("oozie.email.smtp.username", "oozie@localhost");
+        Services.get().get(ConfigurationService.class).getConf().set("oozie.email.smtp.username", EMAIL_USER);
         Services.get().get(ConfigurationService.class).getConf().set("oozie.email.smtp.password", "oozie");
         return ctx;
     }
@@ -178,17 +178,31 @@ public class TestEmailActionExecutor extends ActionExecutorTestCase {
     public void testDoNormalEmail() throws Exception {
         EmailActionExecutor email = new EmailActionExecutor();
         Context emailContext = createNormalContext("email-action");
+        Services.get().get(ConfigurationService.class).getConf().set("oozie.email.from.address", EMAIL_USER);
         ((WorkflowActionBean) emailContext.getAction()).setConf(new XMLOutputter().outputString(prepareEmailElement(false, false)));
         email.start(emailContext, emailContext.getAction());
-        checkEmail(server.getReceivedMessages()[0], false, false);
+        MimeMessage[] messages = server.getReceivedMessages();
+        XLog.getLog(getClass()).warn("Test msgs XXX:" + messages.length);
+        for (MimeMessage m : messages) {
+            for (javax.mail.Address f : m.getFrom()) {
+              XLog.getLog(getClass()).warn(f);
+          }
+        }
+        checkEmail(messages[messages.length-1], false, false);
     }
 
     public void testDoAuthEmail() throws Exception {
         EmailActionExecutor email = new EmailActionExecutor();
         Context emailContext = createNormalContext("email-action");
+        Services.get().get(ConfigurationService.class).getConf().set("oozie.email.from.address", EMAIL_USER);
         ((WorkflowActionBean) emailContext.getAction()).setConf(new XMLOutputter().outputString(prepareEmailElement(true, true)));
         email.start(emailContext, emailContext.getAction());
-        checkEmail(server.getReceivedMessages()[0], true, true);
+        MimeMessage[] messages = server.getReceivedMessages();
+        XLog.getLog(getClass()).warn("Test msgs XXX:" + messages.length);
+        for (MimeMessage m : messages) {
+            XLog.getLog(getClass()).warn(m.getFrom()[0]);
+        }
+        checkEmail(messages[messages.length-1], true, true);
     }
 
     public void testServerTimeouts() throws Exception {
@@ -239,11 +253,13 @@ public class TestEmailActionExecutor extends ActionExecutorTestCase {
     public void testFromAddressHandling() throws Exception {
         EmailActionExecutor email = new EmailActionExecutor();
         XLog.getLog(getClass()).warn("Test XXX");
+        
+        // All tests twiddle oozie.email.from.address
         String default_email_address = Services.get().get(ConfigurationService.class).getConf().get("oozie.email.from.address");
 
         // Test a mal-formatted e-mail
-        Services.get().get(ConfigurationService.class).getConf().set("oozie.email.from.address", "Broken#!;|Address");
         Context ctx = createNormalContext("email-action");
+        Services.get().get(ConfigurationService.class).getConf().set("oozie.email.from.address", "Broken#!;|Address");
         try {
             ((WorkflowActionBean) ctx.getAction()).setConf(new XMLOutputter().outputString(prepareEmailElement(false, false)));
             email.start(ctx, ctx.getAction());
@@ -257,26 +273,30 @@ public class TestEmailActionExecutor extends ActionExecutorTestCase {
         
         // Test a fixed string
         try {
-            Services.get().get(ConfigurationService.class).getConf().set("oozie.email.from.address", "My Cluster's Oozie <special@example.com>");
             ctx = createNormalContext("email-action");
+            Services.get().get(ConfigurationService.class).getConf().set("oozie.email.from.address", "My Cluster's Oozie <special@example.com>");
             CHECK_FROM_PATTERN = Pattern.compile("From:[^:]*special@example.com");
             ((WorkflowActionBean) ctx.getAction()).setConf(new XMLOutputter().outputString(prepareEmailElement(false, false)));
             email.start(ctx, ctx.getAction());
-            checkEmail(server.getReceivedMessages()[0], false, false);
+            MimeMessage[] messages = server.getReceivedMessages();
+            checkEmail(messages[messages.length-1], false, false);
         } finally {
             CHECK_FROM_PATTERN = default_check_from_pattern;
+            Services.get().get(ConfigurationService.class).getConf().set("oozie.email.from.address", default_email_address);
         }
 
         // Test an EL expression
         try {
-            Services.get().get(ConfigurationService.class).getConf().set("oozie.email.from.address", "${wf:user()}@oozie");
             ctx = createNormalContext("email-action");
+            Services.get().get(ConfigurationService.class).getConf().set("oozie.email.from.address", "${wf:user()}@oozie");
             CHECK_FROM_PATTERN = Pattern.compile("From:[^:]*" + getTestUser() + "@oozie");
             ((WorkflowActionBean) ctx.getAction()).setConf(new XMLOutputter().outputString(prepareEmailElement(false, false)));
             email.start(ctx, ctx.getAction());
-            checkEmail(server.getReceivedMessages()[0], false, false);
+            MimeMessage[] messages = server.getReceivedMessages();
+            checkEmail(messages[messages.length-1], false, false);
         } finally {
             CHECK_FROM_PATTERN = default_check_from_pattern;
+            Services.get().get(ConfigurationService.class).getConf().set("oozie.email.from.address", default_email_address);
         }
     }
 
