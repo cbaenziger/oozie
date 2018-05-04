@@ -18,40 +18,19 @@
 
 package org.apache.oozie.action.hadoop;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.InputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.JobID;
-import org.apache.hadoop.mapred.RunningJob;
-import org.apache.oozie.action.hadoop.ActionExecutorTestCase.Context;
-import org.apache.oozie.action.hadoop.LauncherHelper;
-import org.apache.oozie.action.hadoop.SharelibUtils;
-import org.apache.oozie.client.WorkflowAction;
-import org.apache.oozie.service.HadoopAccessorService;
-import org.apache.oozie.service.Services;
-import org.apache.oozie.service.WorkflowAppService;
-import org.apache.oozie.test.XTestCase.Predicate;
-import org.apache.oozie.util.IOUtils;
-import org.apache.oozie.util.XConfiguration;
-import org.apache.oozie.util.XmlUtils;
 import org.apache.oozie.WorkflowActionBean;
 import org.apache.oozie.WorkflowJobBean;
-import org.jdom.Element;
+import org.apache.oozie.client.WorkflowAction;
+import org.apache.oozie.service.WorkflowAppService;
+import org.apache.oozie.util.XConfiguration;
+
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 public class TestIntegrationGitActionExecutor extends ActionExecutorTestCase{
 
@@ -61,34 +40,16 @@ public class TestIntegrationGitActionExecutor extends ActionExecutorTestCase{
         setSystemProperty("oozie.service.ActionService.executor.classes", GitActionExecutor.class.getName());
     }
 
-    private static List<String> getAllFilePath(Path filePath, FileSystem fs) throws FileNotFoundException, IOException {
-        List<String> fileList = new ArrayList<String>();
-        FileStatus[] fileStatus = fs.listStatus(filePath);
-        for (FileStatus fileStat : fileStatus) {
-            if (fileStat.isDirectory()) {
-                fileList.addAll(getAllFilePath(fileStat.getPath(), fs));
-            } else {
-                fileList.add(fileStat.getPath().toString());
-            }
-        }
-        return fileList;
-    }
-
-    /*
-     * Test gitting a repo and ensure the data pulled down is a plausible Git repo to
-     * ensure that all works as expected
-     */
-    public void testGitFile() throws Exception {
+    public void testWhenRepoIsClonedThenGitIndexContentIsReadSuccessfully() throws Exception {
         final Path outputPath = getFsTestCaseDir();
         final Path gitRepo = Path.mergePaths(outputPath, new Path("/repoDir"));
         final Path gitIndex = Path.mergePaths(gitRepo, new Path("/.git/config"));
 
-        // Oozie is a big repository -- this may timeout, until we can do a shallow clone
-        String repoUrl = "https://github.com/apache/oozie";
+        String scoozieRepoUrl = "https://github.com/klout/scoozie";
         String actionXml = "<git>" +
-                "<job-tracker>" + getJobTrackerUri() + "</job-tracker>" +
+                "<resource-manager>" + getJobTrackerUri() + "</resource-manager>" +
                 "<name-node>" + getNameNodeUri() + "</name-node>" +
-                "<git-uri>" + repoUrl + "</git-uri>"+
+                "<git-uri>" + scoozieRepoUrl + "</git-uri>"+
                 "<destination-uri>" + gitRepo + "</destination-uri>" +
                 "</git>";
 
@@ -101,27 +62,26 @@ public class TestIntegrationGitActionExecutor extends ActionExecutorTestCase{
 
         GitActionExecutor ae = new GitActionExecutor();
         ae.check(context, context.getAction());
-        assertTrue(launcherId.equals(context.getAction().getExternalId()));
-        assertEquals("SUCCEEDED", context.getAction().getExternalStatus());
+        assertEquals("launcherId and action.externalId should be the same", launcherId, context.getAction().getExternalId());
+        assertEquals("action should have been SUCCEEDED", "SUCCEEDED", context.getAction().getExternalStatus());
+
         ae.end(context, context.getAction());
-        assertEquals(WorkflowAction.Status.OK, context.getAction().getStatus());
+        assertEquals("action.status should be OK", WorkflowAction.Status.OK, context.getAction().getStatus());
 
-        assertTrue(getFileSystem().exists(outputPath));
-        assertTrue(getFileSystem().exists(gitIndex));
+        assertTrue("could not create test case output path", getFileSystem().exists(outputPath));
+        assertTrue("could not save git index", getFileSystem().exists(gitIndex));
 
-        // the Git conf index should easily fit in memory
-        ByteArrayOutputStream readContent = new ByteArrayOutputStream();
-        byte[] buffer = new byte[1024];
-        InputStream is = getFileSystem().open(gitIndex);
-        int length;
-        while ((length = is.read(buffer)) != -1) {
-            readContent.write(buffer, 0, length);
+        try (InputStream is = getFileSystem().open(gitIndex); ByteArrayOutputStream readContent = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[1024];
+            int length;
+            while ((length = is.read(buffer)) != -1) {
+                readContent.write(buffer, 0, length);
+            }
+            String gitIndexContent = readContent.toString(StandardCharsets.UTF_8.name());
+
+            assertTrue("could not read git index", gitIndexContent.toLowerCase().contains("core"));
+            assertTrue("could not read git index", gitIndexContent.toLowerCase().contains("remote"));
         }
-        String gitIndexContent = readContent.toString("UTF-8");
-        is.close();
-
-        assertTrue(gitIndexContent.toLowerCase().contains("core"));
-        assertTrue(gitIndexContent.toLowerCase().contains("remote"));
     }
 
     private Context createContext(String actionXml) throws Exception {
@@ -131,9 +91,9 @@ public class TestIntegrationGitActionExecutor extends ActionExecutorTestCase{
         protoConf.set(WorkflowAppService.HADOOP_USER, getTestUser());
 
         FileSystem fs = getFileSystem();
-        SharelibUtils.addToDistributedCache("git", fs, getFsTestCaseDir(), protoConf);
+        SharelibUtils.addToDistributedCache(GitActionExecutor.GIT_ACTION_TYPE, fs, getFsTestCaseDir(), protoConf);
 
-        WorkflowJobBean wf = createBaseWorkflow(protoConf, "git-action");
+        WorkflowJobBean wf = createBaseWorkflow(protoConf, GitActionExecutor.GIT_ACTION_TYPE + "-action");
         WorkflowActionBean action = (WorkflowActionBean) wf.getActions().get(0);
         action.setType(ae.getType());
         action.setConf(actionXml);
@@ -141,7 +101,7 @@ public class TestIntegrationGitActionExecutor extends ActionExecutorTestCase{
         return new Context(wf, action);
     }
 
-    protected String submitAction(Context context) throws Exception {
+    private String submitAction(Context context) throws Exception {
         GitActionExecutor ae = new GitActionExecutor();
 
         WorkflowAction action = context.getAction();
@@ -150,20 +110,21 @@ public class TestIntegrationGitActionExecutor extends ActionExecutorTestCase{
         ae.submitLauncher(getFileSystem(), context, action);
 
         String jobId = action.getExternalId();
-        String jobTracker = action.getTrackerUri();
+        String resourceManager = action.getTrackerUri();
         String consoleUrl = action.getConsoleUrl();
-        assertNotNull(jobId);
-        assertNotNull(jobTracker);
-        assertNotNull(consoleUrl);
+        assertNotNull("action.externalId should be filled", jobId);
+        assertNotNull("action.trackerUri should be filled", resourceManager);
+        assertNotNull("action.consoleUrl should be filled", consoleUrl);
 
         JobConf jobConf = createJobConf();
-        jobConf.set("mapred.job.tracker", jobTracker);
+        jobConf.set("mapred.job.tracker", resourceManager);
 
-        JobClient jobClient = createJobClient();
-        String runningJob = context.getAction().getExternalId();
+        createJobClient();
+        String runningJobExternalId = context.getAction().getExternalId();
 
-        assertNotNull(runningJob);
-        return runningJob;
+        assertNotNull("running job has a valid externalId", runningJobExternalId);
+
+        return runningJobExternalId;
     }
 
 }
