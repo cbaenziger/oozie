@@ -43,17 +43,17 @@ public class GitActionExecutor extends JavaActionExecutor {
             "org.apache.oozie.action.hadoop.GitMain";
     public static final String GIT_ACTION_TYPE = "git";
 
-    static final String APP_NAME = "oozie.oozie.app.name";
-    static final String WORKFLOW_ID = "oozie.oozie.workflow.id";
-    static final String CALLBACK_URL = "oozie.oozie.callback.url";
-    static final String RESOURCE_MANAGER = "oozie.oozie.resource.manager";
-    static final String NAME_NODE = "oozie.oozie.name.node";
+    static final String APP_NAME = "oozie.app.name";
+    static final String WORKFLOW_ID = "oozie.workflow.id";
+    static final String CALLBACK_URL = "oozie.callback.url";
+    static final String RESOURCE_MANAGER = "oozie.resource.manager";
+    static final String NAME_NODE = "oozie.name.node";
     static final String GIT_URI = "oozie.git.source.uri";
     static final String GIT_BRANCH = "oozie.git.branch";
     static final String DESTINATION_URI = "oozie.git.destination.uri";
     static final String KEY_PATH = "oozie.git.key.path";
-    static final String ACTION_TYPE = "oozie.oozie.action.type";
-    static final String ACTION_NAME = "oozie.oozie.action.name";
+    static final String ACTION_TYPE = "oozie.action.type";
+    static final String ACTION_NAME = "oozie.action.name";
 
     public GitActionExecutor() {
         super(GIT_ACTION_TYPE);

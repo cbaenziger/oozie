@@ -132,16 +132,8 @@ public class GitMain extends LauncherMain {
 
         Configuration conf = new Configuration();
         FileSystem fs = FileSystem.newInstance(new URI(nameNode), conf);
-        File key = new File(Files.createTempDirectory(
-            Paths.get("."),
-            "keys_" + Long.toString(System.nanoTime()),
-            PosixFilePermissions
-                .asFileAttribute(PosixFilePermissions
-                   .fromString("rwx------")))
-            .toString());
 
-        String mkdirMsg = "Local mkdir called creating temp. dir at: " + key.getAbsolutePath();
-        outAndLog(mkdirMsg);
+        File key = createTempDir("git");
 
         fs.copyToLocalFile(location, new Path("file:///" +
             key.getAbsolutePath() + "/privkey"));
@@ -207,6 +199,28 @@ public class GitMain extends LauncherMain {
     }
 
     /**
+     * Create a local temporary directory
+     *
+     * @param string to use as a prefix to the directory
+     * @returns file path of temp. directory (will be set to delete on exit)
+     * @throws Exception
+     */
+    private File createTempDir(String prefix) throws IOException {
+        File tempD = new File(Files.createTempDirectory(
+            Paths.get("."),
+            prefix + "_" + Long.toString(System.nanoTime()),
+            PosixFilePermissions
+                .asFileAttribute(PosixFilePermissions
+                   .fromString("rwx------")))
+            .toString());
+        tempD.deleteOnExit();
+
+        String localMkdirMsg = "Local mkdir called creating temp. dir at: " + tempD.getAbsolutePath();
+        outAndLog(localMkdirMsg);
+        return tempD;
+    }
+
+    /**
      * Clone a Git repo up to a FileSystem
      *
      * @param destination - FileSystem path to which repository should be cloned
@@ -220,16 +234,7 @@ public class GitMain extends LauncherMain {
         String finishedCopyMsg = "Finished the copy to " + destination.toString() + "!";
         String finishedCloneingMsg = "Finished cloning to local";
 
-        File tempD = new File(Files.createTempDirectory(
-            Paths.get("."),
-            "git_" + Long.toString(System.nanoTime()),
-            PosixFilePermissions
-                .asFileAttribute(PosixFilePermissions
-                   .fromString("rwx------")))
-            .toString());
-
-        String localMkdirMsg = "Local mkdir called creating temp. dir at: " + tempD.getAbsolutePath();
-        outAndLog(localMkdirMsg);
+        File tempD = createTempDir("git");
 
         Configuration conf = new Configuration();
         FileSystem fs = FileSystem.get(destination.toUri(), conf);

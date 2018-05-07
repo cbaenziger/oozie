@@ -1636,7 +1636,7 @@ will be the requeue interval for the actions which are waiting for a long time w
             oozie-sla-0.1.xsd,oozie-sla-0.2.xsd,
             hive2-action-0.1.xsd,hive2-action-0.2.xsd,hive2-action-1.0.xsd,
             spark-action-0.1.xsd,spark-action-0.2.xsd,spark-action-1.0.xsd,
-            git-action-0.1.xsd
+            git-action-1.0.xsd
         </value>
         <description>
             List of schemas for workflows (separated by commas).
