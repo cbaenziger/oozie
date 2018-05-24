@@ -24,10 +24,13 @@ public class GitOperations {
 	private URI srcURL;
 	private String branch;
 	private File repoDir;
-	private String credentialData;
+	private File credentialFile;
 
-	public void GitOperations(URI gitSrc, String branch, File repoDir, credentialFile) {
-		
+	public void GitOperations(URI gitSrc, String branch, File repoDir, File credentialFile) {
+		this.srcURL = srcURL;
+		this.branch = branch;
+		this.repoDir = repoDir;
+		this.credentialFile = credentialFile;
 	}
     /**
      * Clones a Git repository
