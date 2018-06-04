@@ -34,16 +34,8 @@ import org.apache.hadoop.fs.Path;
 
 import org.apache.oozie.util.XLog;
 import org.apache.oozie.action.hadoop.GitOperations;
+import org.apache.oozie.action.hadoop.GitOperations.GitOperationsException;
 
-import com.jcraft.jsch.JSch;
-import com.jcraft.jsch.JSchException;
-import com.jcraft.jsch.Session;
-import org.eclipse.jgit.api.CloneCommand;
-import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.api.TransportConfigCallback;
-import org.eclipse.jgit.transport.*;
-import org.eclipse.jgit.util.FS;
 import com.google.common.annotations.VisibleForTesting;
 
 public class GitMain extends LauncherMain {
@@ -77,19 +69,19 @@ public class GitMain extends LauncherMain {
         try {
             gitRepo.cloneRepoToFS(new Path(destinationUri));
         }
-        catch (IOException | GitMainException e){
+        catch (IOException | GitOperationsException e){
             errorAndLog(e.getMessage());
 
             throw new GitMainException(e.getCause());
         }
     }
 
-    private void outAndLog(String message) {
+    protected static void outAndLog(String message) {
         System.out.println(message);
         LOG.info(message);
     }
 
-    private void errorAndLog(String errorMessage) {
+    protected static void errorAndLog(String errorMessage) {
         System.err.println(errorMessage);
         LOG.error(errorMessage);
     }
@@ -151,7 +143,7 @@ public class GitMain extends LauncherMain {
      * @returns file path of temp. directory (will be set to delete on exit)
      * @throws Exception
      */
-    private File createTempDir(String prefix) throws IOException {
+    protected static File createTempDir(String prefix) throws IOException {
         File tempD = new File(Files.createTempDirectory(
             Paths.get("."),
             prefix + "_" + Long.toString(System.nanoTime()),
