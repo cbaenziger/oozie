@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 import org.apache.oozie.util.XLog;
+import org.apache.oozie.action.hadoop.GitOperations;
 
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
@@ -71,9 +72,10 @@ public class GitMain extends LauncherMain {
         Configuration actionConf = prepareActionConf();
         parseActionConfiguration(actionConf);
         File localKey = getLocalKeyFile();
-
+        GitOperations gitRepo = new GitOperations(new URI(gitUri), gitBranch, localKey);
+        
         try {
-            cloneRepoToFS(new Path(destinationUri), new URI(gitUri), gitBranch, localKey);
+            gitRepo.cloneRepoToFS(new Path(destinationUri));
         }
         catch (IOException | GitMainException e){
             errorAndLog(e.getMessage());
@@ -141,63 +143,7 @@ public class GitMain extends LauncherMain {
 
         return new File(key.getAbsolutePath() + "/privkey");
     }
-
-    /**
-     * Clones a Git repository
-     *
-     * @param gitSrc - URI to the Git repository being cloned
-     * @param branch - String for the Git branch (or null)
-     * @param outputDir - local file reference where the repository should be cloned
-     * @param credentialFile - local file path containing repository authentication key or null
-     */
-    private void cloneRepo(URI gitSrc, String branch, File outputDir, final File credentialFile) throws GitMainException {
-        final SshSessionFactory sshSessionFactory = new JschConfigSessionFactory() {
-            @Override
-            protected void configure(OpenSshConfig.Host host, Session session) {
-
-            }
-
-            @Override
-            protected JSch createDefaultJSch(FS fs) throws JSchException {
-                JSch.setConfig("StrictHostKeyChecking", "no");
-                JSch defaultJSch = super.createDefaultJSch(fs);
-
-                if (credentialFile != null) {
-                    defaultJSch.addIdentity(credentialFile.toString());
-                }
-
-                return defaultJSch;
-            }
-        };
-
-        CloneCommand cloneCommand = Git.cloneRepository();
-        cloneCommand.setURI(gitSrc.toString());
-
-        if (gitSrc.getScheme().toLowerCase().equals("ssh")) {
-          cloneCommand.setTransportConfigCallback(new TransportConfigCallback() {
-              @Override
-              public void configure(Transport transport) {
-                  SshTransport sshTransport = (SshTransport)transport;
-                  sshTransport.setSshSessionFactory(sshSessionFactory);
-              }
-          });
-        }
-
-        cloneCommand.setDirectory(outputDir);
-        // set our branch identifier
-        if (branch != null) {
-            cloneCommand.setBranchesToClone(Arrays.asList("refs/heads/" + branch));
-        }
-
-        try {
-            cloneCommand.call();
-        } catch (GitAPIException e) {
-            String unableToCloneMsg = "Unable to clone Git repo: " + e;
-            errorAndLog(unableToCloneMsg);
-            throw new GitMainException(unableToCloneMsg);
-        }
-    }
-
+   
     /**
      * Create a local temporary directory
      *
@@ -218,44 +164,6 @@ public class GitMain extends LauncherMain {
         String localMkdirMsg = "Local mkdir called creating temp. dir at: " + tempD.getAbsolutePath();
         outAndLog(localMkdirMsg);
         return tempD;
-    }
-
-    /**
-     * Clone a Git repo up to a FileSystem
-     *
-     * @param destination - FileSystem path to which repository should be cloned
-     * @param gitSrc - Git repo URI to clone from
-     * @param branch - Git branch to clone
-     * @param credentialFile - local file path containing repository authentication key or null
-     * @throws Exception
-     */
-    private String cloneRepoToFS(Path destination, URI gitSrc, String branch, File credentialFile)
-            throws IOException, GitMainException {
-        String finishedCopyMsg = "Finished the copy to " + destination.toString() + "!";
-        String finishedCloneingMsg = "Finished cloning to local";
-
-        File tempD = createTempDir("git");
-
-        Configuration conf = new Configuration();
-        FileSystem fs = FileSystem.get(destination.toUri(), conf);
-
-        cloneRepo(gitSrc, branch,
-            tempD, credentialFile);
-
-        // create a list of files and directories to upload
-        File src = new File(tempD.getAbsolutePath());
-        ArrayList<Path> srcs = new ArrayList<Path>(1000);
-        for (File p:src.listFiles()) {
-          srcs.add(new Path(p.toString()));
-        }
-
-        outAndLog(finishedCloneingMsg);
-
-        fs.mkdirs(destination);
-        fs.copyFromLocalFile(false, true, srcs.toArray(new Path[0]), destination);
-        outAndLog(finishedCopyMsg);
-
-        return destination.toString();
     }
 
     /**
