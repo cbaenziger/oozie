@@ -63,7 +63,7 @@ public class GitMain extends LauncherMain {
         parseActionConfiguration(actionConf);
         File localKey = getLocalKeyFile();
         GitOperations gitRepo = new GitOperations(new URI(gitUri), gitBranch, localKey);
-        
+
         try {
             gitRepo.cloneRepoToFS(new Path(destinationUri));
         }
@@ -133,7 +133,7 @@ public class GitMain extends LauncherMain {
 
         return new File(key.getAbsolutePath() + "/privkey");
     }
-   
+
     /**
      * Create a local temporary directory
      *

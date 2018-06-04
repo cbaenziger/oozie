@@ -60,7 +60,7 @@ public class GitOperations {
 		this.branch = branch;
 		this.credentialFile = credentialFile;
 	}
-	
+
     /**
      * Used by GitOperations to wrap a Throwable when an Exception occurs
      */
@@ -74,7 +74,7 @@ public class GitOperations {
             super(t);
         }
     }
-	
+
     /**
      * Clones a Git repository
      */
@@ -124,7 +124,7 @@ public class GitOperations {
             throw new GitOperationsException(unableToCloneMsg);
         }
     }
-    
+
     /**
      * Clone a Git repo up to a FileSystem
      *
@@ -153,13 +153,13 @@ public class GitOperations {
         }
 
         GitMain.outAndLog(finishedCloneingMsg);
-        
+
         fs.mkdirs(destination);
         fs.copyFromLocalFile(false, true, srcs.toArray(new Path[0]), destination);
 
         GitMain.outAndLog(finishedCopyMsg);
-        
+
         return destination.toString();
     }
-    
+ 
 }
