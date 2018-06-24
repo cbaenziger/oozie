@@ -23,16 +23,24 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.net.ConnectException;
 import java.net.UnknownHostException;
+import java.net.URISyntaxException;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclEntryType;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.oozie.action.ActionExecutorException;
 import org.apache.oozie.action.ActionExecutorException.ErrorType;
+import org.apache.oozie.service.HadoopAccessorException;
+import org.apache.oozie.util.XLog;
 import org.jdom.Element;
 import org.jdom.JDOMException;
 import org.jdom.Namespace;
@@ -59,7 +67,6 @@ public class GitActionExecutor extends JavaActionExecutor {
         super(GIT_ACTION_TYPE);
     }
 
-    @SuppressWarnings("rawtypes")
     @Override
     public List<Class<?>> getLauncherClasses() {
         List<Class<?>> classes = new ArrayList<Class<?>>();
@@ -103,7 +110,6 @@ public class GitActionExecutor extends JavaActionExecutor {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     Configuration setupActionConf(Configuration actionConf, Context context,
                                   Element actionXml, Path appPath) throws ActionExecutorException {
         super.setupActionConf(actionConf, context, actionXml, appPath);
@@ -128,7 +134,16 @@ public class GitActionExecutor extends JavaActionExecutor {
         confChecker.checkTrimAndSet(actionXml.getChild("git-uri", ns), GitActionExecutor.GIT_URI);
 
         confChecker.trimAndSet(actionXml.getChild("key-path", ns), KEY_PATH);
-
+        String keyPath = actionConf.get(KEY_PATH);
+        if (keyPath != null && keyPath.length() > 0) {
+            try {
+                confChecker.verifyKeyPermissions(context.getAppFileSystem(), new Path(keyPath));
+            } catch (HadoopAccessorException|URISyntaxException|IOException e){
+                throw new ActionExecutorException(ActionExecutorException.ErrorType.ERROR, "FAILED_OPERATION", XLog
+                        .format("Not able to verify permissions on key file {0}", keyPath), e);
+            }
+        }
+        
         confChecker.trimAndSet(actionXml.getChild("branch", ns), GIT_BRANCH);
 
         actionConf.set(ACTION_TYPE, getType());
@@ -155,6 +170,33 @@ public class GitActionExecutor extends JavaActionExecutor {
             this.actionConf = actionConf;
         }
 
+        /**
+         * Validates Git key permissions are secure on disk and throw an exception if not.
+         * Otherwise exit out gracefully
+         */
+        void verifyKeyPermissions(FileSystem fs, Path keyPath) throws IOException, ActionExecutorException{
+            String failedPermsWarning = "The permissions on the access key {0} are considered insecure: {1}";
+            FileStatus status = fs.getFileStatus(keyPath);
+            FsPermission perms = status.getPermission();
+            // check standard permissioning for other's read access
+            if (perms.getOtherAction().and(FsAction.READ) == FsAction.READ) {
+                throw new ActionExecutorException(ActionExecutorException.ErrorType.ERROR, "INSECURE_ACCESS_KEY", XLog
+                        .format(failedPermsWarning, keyPath, perms.toString()));
+            }
+            // check if any ACLs have been specified which allow others read access
+            if (perms.getAclBit()) {
+                List<AclEntry> aclEntries = new ArrayList<>(fs.getAclStatus(keyPath).getEntries());
+                for (AclEntry acl: aclEntries) {
+                    if (acl.getType() == AclEntryType.OTHER) {
+                        if (acl.getPermission().and(FsAction.READ) == FsAction.READ) {
+                            throw new ActionExecutorException(ActionExecutorException.ErrorType.ERROR, "INSECURE_ACCESS_KEY", XLog
+                                    .format(failedPermsWarning, keyPath, perms.toString()));
+                        }
+                    }
+                }
+            }
+        }
+        
         /**
          * Calls helper function to verify value not null and throw an exception if so.
          * Otherwise, set actionConf value displayName to value
