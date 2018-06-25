@@ -38,7 +38,7 @@ public class TestGitActionExecutor extends ActionExecutorTestCase{
     @SuppressWarnings("unchecked")
     public void testWhenParametersFilledThenConfigurationFieldsPopulated() throws Exception {
         GitActionExecutor ae = new GitActionExecutor();
-        assertTrue("Can not find GitMain class is launcher classes",
+        assertTrue("Can not find GitMain class in launcher classes",
           ae.getLauncherClasses().contains(GitMain.class));
 
         Path testKey = new Path(getAppPath().toString() + "/test_key");
