@@ -51,15 +51,15 @@ import org.eclipse.jgit.transport.*;
 import org.eclipse.jgit.util.FS;
 
 public class GitOperations {
-	private URI srcURL;
-	private String branch;
-	private File credentialFile;
+    private URI srcURL;
+    private String branch;
+    private File credentialFile;
 
-	public GitOperations(URI gitSrc, String branch, File credentialFile) {
-		this.srcURL = gitSrc;
-		this.branch = branch;
-		this.credentialFile = credentialFile;
-	}
+    public GitOperations(URI gitSrc, String branch, File credentialFile) {
+       this.srcURL = gitSrc;
+       this.branch = branch;
+       this.credentialFile = credentialFile;
+    }
 
     /**
      * Used by GitOperations to wrap a Throwable when an Exception occurs
