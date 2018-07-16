@@ -26,6 +26,7 @@ import org.apache.oozie.WorkflowJobBean;
 import org.apache.oozie.client.WorkflowAction;
 import org.apache.oozie.service.WorkflowAppService;
 import org.apache.oozie.util.XConfiguration;
+//import org.apache.oozie.action.hadoop.GitServer;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -44,18 +45,29 @@ public class TestIntegrationGitActionExecutor extends ActionExecutorTestCase{
         final Path outputPath = getFsTestCaseDir();
         final Path gitRepo = Path.mergePaths(outputPath, new Path("/repoDir"));
         final Path gitIndex = Path.mergePaths(gitRepo, new Path("/.git/config"));
-
-        String scoozieRepoUrl = "https://github.com/klout/scoozie";
+        
+        String localRepo = "git://127.0.0.1/repo.git";
         String actionXml = "<git>" +
                 "<resource-manager>" + getJobTrackerUri() + "</resource-manager>" +
                 "<name-node>" + getNameNodeUri() + "</name-node>" +
-                "<git-uri>" + scoozieRepoUrl + "</git-uri>"+
+                "<git-uri>" + localRepo + "</git-uri>"+
                 "<destination-uri>" + gitRepo + "</destination-uri>" +
                 "</git>";
 
         Context context = createContext(actionXml);
         final String launcherId = submitAction(context);
-        waitUntilYarnAppDoneAndAssertSuccess(launcherId);
+
+        GitServer myGitRepo = null;
+        try {
+            myGitRepo = new GitServer();
+            myGitRepo.startEphemeralReposServer(GitServer.NO_OP_INITIALIZER);
+           
+            waitUntilYarnAppDoneAndAssertSuccess(launcherId);
+        } finally {
+            if (myGitRepo != null) {
+                myGitRepo.stopAndCleanupReposServer();
+            }
+        }
         Map<String, String> actionData = LauncherHelper.getActionData(getFileSystem(), context.getActionDir(),
                 context.getProtoActionConf());
         assertFalse(LauncherHelper.hasIdSwap(actionData));
