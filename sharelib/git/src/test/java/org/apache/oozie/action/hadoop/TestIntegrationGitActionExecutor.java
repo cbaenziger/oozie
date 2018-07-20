@@ -60,7 +60,6 @@ public class TestIntegrationGitActionExecutor extends ActionExecutorTestCase{
         GitServer myGitRepo = null;
         try {
             myGitRepo = new GitServer();
-            myGitRepo.startEphemeralReposServer(GitServer.NO_OP_INITIALIZER);
            
             waitUntilYarnAppDoneAndAssertSuccess(launcherId);
         } finally {
