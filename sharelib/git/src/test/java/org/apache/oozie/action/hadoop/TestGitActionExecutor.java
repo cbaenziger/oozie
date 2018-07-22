@@ -32,6 +32,7 @@ import org.apache.oozie.util.XmlUtils;
 import org.apache.oozie.WorkflowActionBean;
 import org.apache.oozie.WorkflowJobBean;
 import org.jdom.Element;
+import org.junit.Assert;
 
 public class TestGitActionExecutor extends ActionExecutorTestCase{
 
@@ -108,12 +109,12 @@ public class TestGitActionExecutor extends ActionExecutorTestCase{
         Context context = new Context(wf, action);
         Configuration conf = ae.createBaseHadoopConf(context, actionXml);
         try {
+            // we expect this to throw an ActionExecutorException:
             ae.setupActionConf(conf, context, actionXml, getFsTestCaseDir());
-            // should throw an ActionExecutorException
-            throw(new Exception("Failed Test"));
+            Assert.fail("Failed Test");
         } catch (ActionExecutorException e) {
             if (!e.getMessage().contains("insecure")) {
-                throw(new Exception("Failed Test"));
+                Assert.fail("Failed Test");
             }
         }
     }

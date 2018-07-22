@@ -20,7 +20,7 @@ package org.apache.oozie.action.hadoop;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.oozie.WorkflowActionBean;
 import org.apache.oozie.WorkflowJobBean;
 import org.apache.oozie.client.WorkflowAction;
@@ -127,10 +127,8 @@ public class TestIntegrationGitActionExecutor extends ActionExecutorTestCase{
         assertNotNull("action.trackerUri should be filled", resourceManager);
         assertNotNull("action.consoleUrl should be filled", consoleUrl);
 
-        JobConf jobConf = createJobConf();
-        jobConf.set("mapred.job.tracker", resourceManager);
+        Configuration conf = createJobConf();
 
-        createJobClient();
         String runningJobExternalId = context.getAction().getExternalId();
 
         assertNotNull("running job has a valid externalId", runningJobExternalId);
