@@ -157,20 +157,26 @@ public class GitMain extends LauncherMain {
     }
 
     /**
-     * Validate a URI is well formed
+     * Validate a URI is well formed and has a scheme
      *
      * @param testUri URI string to test
      * @returns URI from string
      * @throws GitMainException
      */
-    private URI validUri(String testUri) throws GitMainException {
+    private URI isValidUri(String testUri) throws GitMainException {
+        URI uri;
         try {
-            return(new URI(testUri));
+            uri = new URI(testUri);
         } catch (URISyntaxException e) {
             throw new GitMainException("Action Configuration does not have "
                     + "a proper URI: " + testUri + " exception "
                     + e.toString());
         }
+        if (uri.getScheme() == null) {
+            throw new GitMainException("Action Configuration does not have "
+                    + "a proper URI " + testUri + " null scheme.");
+        }
+        return uri;
     }
 
     /**
@@ -182,26 +188,17 @@ public class GitMain extends LauncherMain {
     private void parseActionConfiguration(Configuration actionConf) throws GitMainException {
         GitActionExecutor.VerifyActionConf confChecker = new GitActionExecutor.VerifyActionConf(actionConf);
 
-        confChecker.checkAndGetTrimmed(GitActionExecutor.APP_NAME);
-        confChecker.checkAndGetTrimmed(GitActionExecutor.WORKFLOW_ID);
-        confChecker.checkAndGetTrimmed(GitActionExecutor.CALLBACK_URL);
-        confChecker.checkAndGetTrimmed(GitActionExecutor.RESOURCE_MANAGER);
-
         nameNode = confChecker.checkAndGetTrimmed(GitActionExecutor.NAME_NODE);
         destinationUri = confChecker.checkAndGetTrimmed(GitActionExecutor.DESTINATION_URI);
         try {
-            FileSystem fs = FileSystem.get(validUri(destinationUri), actionConf);
+            FileSystem fs = FileSystem.get(isValidUri(destinationUri), actionConf);
             destinationUri = fs.makeQualified(new Path(destinationUri)).toString();
         } catch (IOException e) {
             throw new GitMainException("Action Configuration does not have "
                     + "a valid filesystem for URI " + GitActionExecutor.DESTINATION_URI + "exception "
                     + e.toString());
         }
-        gitUri = confChecker.checkAndGetTrimmed(GitActionExecutor.GIT_URI);
-        if (validUri(gitUri).getScheme() == null) {
-          throw new GitMainException("Action Configuration does not have "
-                  + "a proper URI " + gitUri);
-        }
+        gitUri = isValidUri(confChecker.checkAndGetTrimmed(GitActionExecutor.GIT_URI)).toString();
         gitBranch = actionConf.get(GitActionExecutor.GIT_BRANCH);
         keyPath = actionConf.get(GitActionExecutor.KEY_PATH);
 

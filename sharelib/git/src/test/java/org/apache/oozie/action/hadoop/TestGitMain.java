@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.Path;
 
 import org.apache.oozie.test.XFsTestCase;
 
-public class TestGitMainGetKey extends XFsTestCase {
+public class TestGitMain extends XFsTestCase {
 
     private GitMain gitmain = null;
 
