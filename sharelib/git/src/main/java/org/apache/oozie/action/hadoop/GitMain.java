@@ -30,7 +30,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
-import org.apache.oozie.util.XLog;
 import org.apache.oozie.action.hadoop.GitOperations;
 import org.apache.oozie.action.hadoop.GitOperations.GitOperationsException;
 
@@ -38,7 +37,6 @@ import com.google.common.annotations.VisibleForTesting;
 
 public class GitMain extends LauncherMain {
 
-    private static final XLog LOG = XLog.getLog(GitMain.class);
     private static final String OOZIE_ACTION_CONF = "oozie.action.conf.xml";
 
     @VisibleForTesting
@@ -76,12 +74,10 @@ public class GitMain extends LauncherMain {
 
     protected static void outAndLog(String message) {
         System.out.println(message);
-        LOG.info(message);
     }
 
     protected static void errorAndLog(String errorMessage) {
         System.err.println(errorMessage);
-        LOG.error(errorMessage);
     }
 
     private Configuration prepareActionConf() {
