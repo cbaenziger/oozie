@@ -118,16 +118,6 @@ public class GitActionExecutor extends JavaActionExecutor {
 
         VerifyActionConf confChecker = new VerifyActionConf(actionConf);
 
-        confChecker.checkAndSet(context.getWorkflow().getAppName(), GitActionExecutor.APP_NAME);
-
-        confChecker.checkAndSet(context.getWorkflow().getId(), GitActionExecutor.WORKFLOW_ID);
-
-        confChecker.checkAndSet(context.getCallbackUrl("$jobStatus"), GitActionExecutor.CALLBACK_URL);
-
-        confChecker.checkTrimAndSet(actionXml.getChild("resource-manager", ns), GitActionExecutor.RESOURCE_MANAGER);
-
-        confChecker.checkTrimAndSet(actionXml.getChild("name-node", ns), GitActionExecutor.NAME_NODE);
-
         confChecker.checkTrimAndSet(actionXml.getChild("destination-uri", ns),
                 GitActionExecutor.DESTINATION_URI);
 
