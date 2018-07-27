@@ -20,6 +20,8 @@ package org.apache.oozie.action.hadoop;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -47,14 +49,10 @@ public class TestGitMain extends XFsTestCase {
         setupCredentialFile(credentialFilePath, credentialFileData);
 
         File localFile = gitmain.getKeyFromFS(credentialFilePath);
+        String testOutput = new String(Files.readAllBytes(localFile.toPath()));
 
-        try (FileReader reader = new FileReader(localFile)) {
-            char[] testOutput = new char[credentialFileData.length()];
-            assertEquals("credential file length mismatch", 13, credentialFileData.length());
-
-            reader.read(testOutput, 0, credentialFileData.length());
-            assertEquals("credential file data mismatch", credentialFileData, String.valueOf(testOutput));
-        }
+        assertEquals("credential file length mismatch", 13, credentialFileData.length());
+        assertEquals("credential file data mismatch", credentialFileData, String.valueOf(testOutput));
 
         FileUtils.deleteDirectory(new File(localFile.getParent()));
     }

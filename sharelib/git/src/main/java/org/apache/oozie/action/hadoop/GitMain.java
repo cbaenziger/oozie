@@ -143,7 +143,7 @@ public class GitMain extends LauncherMain {
             prefix + "_" + Long.toString(System.nanoTime()),
             PosixFilePermissions
                 .asFileAttribute(PosixFilePermissions
-                   .fromString("rwx------")))
+                .fromString("rwx------")))
             .toString());
         tempD.deleteOnExit();
 

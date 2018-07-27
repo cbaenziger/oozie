@@ -92,7 +92,7 @@ public class GitActionExecutor extends JavaActionExecutor {
         registerErrors();
     }
 
-    void registerErrors() {
+    private void registerErrors() {
         registerError(UnknownHostException.class.getName(), ErrorType.TRANSIENT, "GIT001");
         registerError(AccessControlException.class.getName(), ErrorType.NON_TRANSIENT,
                 "JA002");

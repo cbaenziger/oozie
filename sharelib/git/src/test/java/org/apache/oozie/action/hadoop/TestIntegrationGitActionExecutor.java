@@ -20,6 +20,7 @@ package org.apache.oozie.action.hadoop;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.oozie.WorkflowActionBean;
 import org.apache.oozie.WorkflowJobBean;
@@ -83,12 +84,7 @@ public class TestIntegrationGitActionExecutor extends ActionExecutorTestCase{
         assertTrue("could not save git index", getFileSystem().exists(gitIndex));
 
         try (InputStream is = getFileSystem().open(gitIndex); ByteArrayOutputStream readContent = new ByteArrayOutputStream()) {
-            byte[] buffer = new byte[1024];
-            int length;
-            while ((length = is.read(buffer)) != -1) {
-                readContent.write(buffer, 0, length);
-            }
-            String gitIndexContent = readContent.toString(StandardCharsets.UTF_8.name());
+            String gitIndexContent = IOUtils.toString(is, "UTF-8");
 
             assertTrue("could not read git index", gitIndexContent.toLowerCase().contains("core"));
             assertTrue("could not read git index", gitIndexContent.toLowerCase().contains("remote"));
