@@ -76,6 +76,35 @@ public class TestGitActionExecutor extends ActionExecutorTestCase{
         assertEquals("branch must be set", branch, conf.get(GitActionExecutor.GIT_BRANCH));
         assertEquals("destination uri must be set", destDir, conf.get(GitActionExecutor.DESTINATION_URI));
     }
+    
+    // XXX In-progress, validUri is in GitMain
+    public void testGitRepoMustHaveScheme() throws Exception {
+        GitActionExecutor ae = new GitActionExecutor();
+        assertTrue("Can not find GitMain class in launcher classes",
+          ae.getLauncherClasses().contains(GitMain.class));
+        
+        final String repoUrl = "github.com/apache/oozie";
+        final String destDir = "repoDir";
+        final String branch = "myBranch";
+        Element actionXml = XmlUtils.parseXml("<git>" +
+                "<resource-manager>" + getJobTrackerUri() + "</resource-manager>" +
+                "<name-node>" + getNameNodeUri() + "</name-node>" +
+                "<git-uri>" + repoUrl + "</git-uri>"+
+                "<branch>" + branch + "</branch>"+
+                "<destination-uri>" + destDir + "</destination-uri>" +
+                "</git>");
+        
+        XConfiguration protoConf = new XConfiguration();
+        protoConf.set(WorkflowAppService.HADOOP_USER, getTestUser());
+
+        WorkflowJobBean wf = createBaseWorkflow(protoConf, GitActionExecutor.GIT_ACTION_TYPE + "-action");
+        WorkflowActionBean action = (WorkflowActionBean) wf.getActions().get(0);
+        action.setType(ae.getType());
+
+        Context context = new Context(wf, action);
+        Configuration conf = ae.createBaseHadoopConf(context, actionXml);
+        ae.setupActionConf(conf, context, actionXml, getFsTestCaseDir());
+    }
 
     public void testAccessKeyPermissionsInsecure() throws Exception {
         GitActionExecutor ae = new GitActionExecutor();
