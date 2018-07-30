@@ -118,12 +118,14 @@ public class GitActionExecutor extends JavaActionExecutor {
 
         VerifyActionConf confChecker = new VerifyActionConf(actionConf);
 
-        confChecker.checkTrimAndSet(actionXml.getChild("destination-uri", ns),
-                GitActionExecutor.DESTINATION_URI);
+        confChecker.checkTrimAndSet(GitActionExecutor.NAME_NODE, actionXml.getChild("name-node", ns));
 
-        confChecker.checkTrimAndSet(actionXml.getChild("git-uri", ns), GitActionExecutor.GIT_URI);
+        confChecker.checkTrimAndSet(GitActionExecutor.DESTINATION_URI,
+                actionXml.getChild("destination-uri", ns));
 
-        confChecker.trimAndSet(actionXml.getChild("key-path", ns), KEY_PATH);
+        confChecker.checkTrimAndSet(GitActionExecutor.GIT_URI, actionXml.getChild("git-uri", ns));
+
+        confChecker.trimAndSet(KEY_PATH, actionXml.getChild("key-path", ns));
         String keyPath = actionConf.get(KEY_PATH);
         if (keyPath != null && keyPath.length() > 0) {
             try {
@@ -134,7 +136,7 @@ public class GitActionExecutor extends JavaActionExecutor {
             }
         }
         
-        confChecker.trimAndSet(actionXml.getChild("branch", ns), GIT_BRANCH);
+        confChecker.trimAndSet(GIT_BRANCH, actionXml.getChild("branch", ns));
 
         actionConf.set(ACTION_TYPE, getType());
         actionConf.set(ACTION_NAME, GIT_ACTION_TYPE);
@@ -186,34 +188,32 @@ public class GitActionExecutor extends JavaActionExecutor {
                 }
             }
         }
-        
-        /**
-         * Calls helper function to verify value not null and throw an exception if so.
-         * Otherwise, set actionConf value displayName to value
-         */
-        void checkAndSet(String value, String displayName) {
-            Preconditions.checkNotNull(value, "Action Configuration does not have [%s] property", displayName);
-            actionConf.set(displayName, value);
-        }
 
         /**
          * Calls helper function to verify value not null and throw an exception if so.
          * Otherwise, set actionConf value displayName to XML trimmed text value
          */
-        void checkTrimAndSet(Element value, String displayName) {
+        void checkTrimAndSet(String displayName, Element value) {
             Preconditions.checkNotNull(value, "Action Configuration does not have [%s] property", displayName);
             actionConf.set(displayName, value.getTextTrim());
         }
 
         /**
-         * Calls helper function to verify value not null but does not throw an exception if null.
-         * Otherwise, sets actionConf value displayName to XML trimmed text value
+        * Calls helper function to verify value not null and throw an exception if so.
+        * Otherwise, set actionConf value displayName to value
+        */
+        void checkAndSet(String displayName, String value) {
+            Preconditions.checkNotNull(value, "Action Configuration does not have [%s] property", displayName);
+            actionConf.set(displayName, value);
+        }
+
+        /**
+         * *f value is null, does nothing
+         * If value is not null, sets actionConf value displayName to XML trimmed text value
          */
-        void trimAndSet(Element value, String displayName) {
-            try {
-                Preconditions.checkNotNull(value, "Action Configuration does not have [%s] property", displayName);
+        void trimAndSet(String displayName, Element value) {
+            if (value != null) {
                 actionConf.set(displayName, value.getTextTrim());
-            } catch (NullPointerException ignored) {
             }
         }
 
