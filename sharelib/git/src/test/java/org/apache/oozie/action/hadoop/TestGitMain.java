@@ -22,14 +22,30 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Properties;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 
-import org.apache.oozie.test.XFsTestCase;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.oozie.action.ActionExecutor;
+import org.apache.oozie.action.ActionExecutorException;
+import org.apache.oozie.client.OozieClient;
+import org.apache.oozie.service.WorkflowAppService;
+import org.apache.oozie.util.XConfiguration;
+import org.apache.oozie.util.XmlUtils;
+import org.apache.oozie.WorkflowActionBean;
+import org.apache.oozie.WorkflowJobBean;
+import org.jdom.Element;
+import org.junit.Assert;
 
-public class TestGitMain extends XFsTestCase {
+import org.apache.oozie.test.MiniOozieTestCase;
+
+public class TestGitMain extends MiniOozieTestCase {
 
     private GitMain gitmain = null;
 
@@ -41,12 +57,47 @@ public class TestGitMain extends XFsTestCase {
         gitmain.nameNode = getFileSystem().getUri().toString();
     }
 
+    public void testGitRepoMustHaveScheme() throws Exception {
+        OozieClient client = this.getClient();
+        Properties conf = client.createConfiguration();
+        String workflowUri = getFsTestCaseDir().toString() + "/workflow.xml";
+        conf.setProperty(OozieClient.APP_PATH, new Path(workflowUri, "workflow.xml").toString());
+        String jobId = client.run(conf);
+    	GitActionExecutor ae = new GitActionExecutor();
+        assertTrue("Can not find GitMain class in launcher classes",
+          ae.getLauncherClasses().contains(GitMain.class));
+        
+        final String repoUrl = "aURLWithoutAScheme/andSomeMorePathStuff";
+        final String destDir = "repoDir";
+        final String branch = "myBranch";
+        Element actionXml = XmlUtils.parseXml("<git>" +
+                "<resource-manager>" + getJobTrackerUri() + "</resource-manager>" +
+                "<name-node>" + getNameNodeUri() + "</name-node>" +
+                "<git-uri>" + repoUrl + "</git-uri>"+
+                "<branch>" + branch + "</branch>"+
+                "<destination-uri>" + destDir + "</destination-uri>" +
+                "</git>");
+        writeHDFSFile(new Path(workflowUri), actionXml.toString());
+        
+        XConfiguration protoConf = new XConfiguration();
+        protoConf.set(WorkflowAppService.HADOOP_USER, getTestUser());
+
+        /* XXX
+        WorkflowJobBean wf = createBaseWorkflow(protoConf, GitActionExecutor.GIT_ACTION_TYPE + "-action");
+        WorkflowActionBean action = (WorkflowActionBean) wf.getActions().get(0);
+        action.setType(ae.getType());
+
+        Context context = new Context(wf, action);
+        Configuration conf = ae.createBaseHadoopConf(context, actionXml);
+        ae.setupActionConf(conf, context, actionXml, getFsTestCaseDir());*/
+    }
+    
     public void testGitKeyFileIsCopiedToHDFS() throws Exception {
         final Path credentialFilePath = Path.mergePaths(getFsTestCaseDir(), new Path("/key_dir/my_key.dsa"));
         final String credentialFileData = "Key file data";
         Path.mergePaths(getFsTestCaseDir(), new Path("/destDir"));
 
-        setupCredentialFile(credentialFilePath, credentialFileData);
+        writeHDFSFile(credentialFilePath, credentialFileData);
 
         File localFile = gitmain.getKeyFromFS(credentialFilePath);
         String testOutput = new String(Files.readAllBytes(localFile.toPath()));
@@ -57,10 +108,10 @@ public class TestGitMain extends XFsTestCase {
         FileUtils.deleteDirectory(new File(localFile.getParent()));
     }
 
-    private void setupCredentialFile(Path credentialFilePath, String credentialFileData) throws IOException {
-        try (FSDataOutputStream credentialFileOS = getFileSystem().create(credentialFilePath)) {
-            credentialFileOS.write(credentialFileData.getBytes());
-            credentialFileOS.flush();
+    private void writeHDFSFile(Path hdfsFilePath, String fileData) throws IOException {
+        try (FSDataOutputStream hdfsFileOS = getFileSystem().create(hdfsFilePath)) {
+            hdfsFileOS.write(fileData.getBytes());
+            hdfsFileOS.flush();
         }
     }
 }
