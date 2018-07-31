@@ -838,14 +838,14 @@
             <b>prepare</b>
         </field>
 
-        <field custom-converter="org.apache.oozie.fluentjob.api.mapping.GitLauncherConverter">
-            <a>launcher</a>
-            <b>launcher</b>
-        </field>
-
         <field custom-converter="org.apache.oozie.fluentjob.api.mapping.GitConfigurationConverter">
             <a>configuration</a>
             <b>configuration</b>
+        </field>
+
+        <field>
+            <a>gitUri</a>
+            <b>gitUri</b>
         </field>
 
         <field>
@@ -861,16 +861,6 @@
         <field>
             <a>destinationUri</a>
             <b>destinationUri</b>
-        </field>
-
-        <field>
-            <a>actionName</a>
-            <b>name</b>
-        </field>
-
-        <field>
-            <a>actionClass</a>
-            <b>clazz</b>
         </field>
     </mapping>
 </mappings>

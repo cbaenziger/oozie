@@ -40,6 +40,16 @@ import org.apache.oozie.util.XConfiguration;
 import org.apache.oozie.util.XmlUtils;
 import org.apache.oozie.WorkflowActionBean;
 import org.apache.oozie.WorkflowJobBean;
+import org.apache.oozie.client.WorkflowJob;
+
+import org.apache.oozie.fluentjob.api.action.EmailActionBuilder;
+import org.apache.oozie.fluentjob.api.action.ErrorHandler;
+import org.apache.oozie.fluentjob.api.action.GitAction;
+import org.apache.oozie.fluentjob.api.action.GitActionBuilder;
+import org.apache.oozie.fluentjob.api.factory.WorkflowFactory;
+import org.apache.oozie.fluentjob.api.workflow.Workflow;
+import org.apache.oozie.fluentjob.api.workflow.WorkflowBuilder;
+
 import org.jdom.Element;
 import org.junit.Assert;
 
@@ -60,28 +70,42 @@ public class TestGitMain extends MiniOozieTestCase {
     public void testGitRepoMustHaveScheme() throws Exception {
         OozieClient client = this.getClient();
         Properties conf = client.createConfiguration();
-        String workflowUri = getFsTestCaseDir().toString() + "/workflow.xml";
-        conf.setProperty(OozieClient.APP_PATH, new Path(workflowUri, "workflow.xml").toString());
-        String jobId = client.run(conf);
-    	GitActionExecutor ae = new GitActionExecutor();
-        assertTrue("Can not find GitMain class in launcher classes",
-          ae.getLauncherClasses().contains(GitMain.class));
         
-        final String repoUrl = "aURLWithoutAScheme/andSomeMorePathStuff";
-        final String destDir = "repoDir";
-        final String branch = "myBranch";
-        Element actionXml = XmlUtils.parseXml("<git>" +
-                "<resource-manager>" + getJobTrackerUri() + "</resource-manager>" +
-                "<name-node>" + getNameNodeUri() + "</name-node>" +
-                "<git-uri>" + repoUrl + "</git-uri>"+
-                "<branch>" + branch + "</branch>"+
-                "<destination-uri>" + destDir + "</destination-uri>" +
-                "</git>");
-        writeHDFSFile(new Path(workflowUri), actionXml.toString());
-        
-        XConfiguration protoConf = new XConfiguration();
-        protoConf.set(WorkflowAppService.HADOOP_USER, getTestUser());
+        final class GitWorkflowFactory implements WorkflowFactory {
+           @Override
+           public Workflow create() {
+               final GitAction gitAction = GitActionBuilder.create()
+                       .withName("git-action")
+                       .withResourceManager("${resourceManager}")
+                       .withNameNode("${nameNode}")
+                       .withConfigProperty("mapred.job.queue.name", "${queueName}")
+                       .withGitUri("aURLWithoutAScheme/andSomeMorePathStuff") //XXX Should not have schema
+                       .withDestinationUri("repoDir")
+                       .withBranch("myBranch")
+                       .build();
 
+               final Workflow gitWorkflow = new WorkflowBuilder()
+                       .withName("git-workflow")
+                       .withDagContainingNode(gitAction).build();
+
+               return gitWorkflow;
+           }
+        }
+        
+        Path workflowUri = new Path(getFsTestCaseDir().toString(), "workflow.xml");
+        conf.setProperty(OozieClient.APP_PATH, workflowUri.toString());
+        
+        System.out.println("XXX: " + new GitWorkflowFactory().create().asXml());
+        
+        writeHDFSFile(workflowUri, new GitWorkflowFactory().create().asXml());
+        
+        String jobId = client.run(conf);
+        
+        while (client.getJobInfo(jobId).getStatus() == WorkflowJob.Status.RUNNING) {
+            System.out.println("Workflow job running ...");
+            Thread.sleep(10 * 1000);
+        }
+        
         /* XXX
         WorkflowJobBean wf = createBaseWorkflow(protoConf, GitActionExecutor.GIT_ACTION_TYPE + "-action");
         WorkflowActionBean action = (WorkflowActionBean) wf.getActions().get(0);

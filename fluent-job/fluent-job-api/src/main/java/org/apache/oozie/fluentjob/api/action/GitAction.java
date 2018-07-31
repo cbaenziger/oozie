@@ -38,11 +38,11 @@ import java.util.Map;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class GitAction extends Node implements HasAttributes {
-    private final ActionAttributes attributes;
-    private final String gitUri;
-    private final String branch;
-    private final String keyPath;
-    private final String destinationUri;
+    protected final ActionAttributes attributes;
+    protected final String gitUri;
+    protected final String branch;
+    protected final String keyPath;
+    protected final String destinationUri;
 
     GitAction(final ConstructionData constructionData,
               final ActionAttributes attributes,
@@ -69,10 +69,6 @@ public class GitAction extends Node implements HasAttributes {
 
     public Prepare getPrepare() {
         return attributes.getPrepare();
-    }
-
-    public Launcher getLauncher() {
-        return attributes.getLauncher();
     }
 
     public String getConfigProperty(final String property) {

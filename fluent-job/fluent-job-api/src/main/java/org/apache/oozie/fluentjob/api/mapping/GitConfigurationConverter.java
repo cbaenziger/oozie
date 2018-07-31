@@ -18,8 +18,8 @@
 
 package org.apache.oozie.fluentjob.api.mapping;
 
-import org.apache.oozie.fluentjob.api.generated.action.spark.CONFIGURATION;
-import org.apache.oozie.fluentjob.api.generated.action.spark.ObjectFactory;
+import org.apache.oozie.fluentjob.api.generated.action.git.CONFIGURATION;
+import org.apache.oozie.fluentjob.api.generated.action.git.ObjectFactory;
 import org.dozer.DozerConverter;
 
 import java.util.ArrayList;

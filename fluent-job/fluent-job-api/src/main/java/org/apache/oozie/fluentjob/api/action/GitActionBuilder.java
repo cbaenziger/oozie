@@ -23,9 +23,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.oozie.fluentjob.api.ModifyOnce;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * A builder class for {@link GitAction}.
  *
@@ -38,11 +35,11 @@ import java.util.List;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class GitActionBuilder extends NodeBuilderBaseImpl<GitActionBuilder> implements Builder<GitAction> {
-    protected final ActionAttributesBuilder attributesBuilder;
-    protected final ModifyOnce<String> gitUri;
-    protected final ModifyOnce<String> branch;
-    protected final ModifyOnce<String> keyPath;
-    protected final ModifyOnce<String> destinationUri;
+    private final ActionAttributesBuilder attributesBuilder;
+    private final ModifyOnce<String> gitUri;
+    private final ModifyOnce<String> branch;
+    private final ModifyOnce<String> keyPath;
+    private final ModifyOnce<String> destinationUri;
 
     public static GitActionBuilder create() {
         final ActionAttributesBuilder builder = ActionAttributesBuilder.create();
@@ -62,13 +59,13 @@ public class GitActionBuilder extends NodeBuilderBaseImpl<GitActionBuilder> impl
 
     public static GitActionBuilder createFromExistingAction(final GitAction action) {
         final ActionAttributesBuilder builder = ActionAttributesBuilder.createFromExisting(action.getAttributes());
-        final ModifyOnce<String> gitUri = new ModifyOnce<>(action.getGitUri);
-        final ModifyOnce<String> branch = new ModifyOnce<>(action.getBranch);
-        final ModifyOnce<String> keyPath = new ModifyOnce<>(action.getKeyPath);
-        final ModifyOnce<String> destinationUri = new ModifyOnce<>(action.getDestinationUri);
+        final ModifyOnce<String> gitUri = new ModifyOnce<>(action.getGitUri());
+        final ModifyOnce<String> branch = new ModifyOnce<>(action.getBranch());
+        final ModifyOnce<String> keyPath = new ModifyOnce<>(action.getKeyPath());
+        final ModifyOnce<String> destinationUri = new ModifyOnce<>(action.getDestinationUri());
 
         return new GitActionBuilder(
-                null,
+                action,
                 builder,
                 gitUri,
                 branch,
@@ -84,7 +81,7 @@ public class GitActionBuilder extends NodeBuilderBaseImpl<GitActionBuilder> impl
         final ModifyOnce<String> destinationUri = new ModifyOnce<>();
 
         return new GitActionBuilder(
-                null,
+                action,
                 builder,
                 gitUri,
                 branch,
@@ -92,7 +89,7 @@ public class GitActionBuilder extends NodeBuilderBaseImpl<GitActionBuilder> impl
                 destinationUri);
     }
 
-    GitActionBuilder(final Node action,
+    private GitActionBuilder(final Node action,
                      final ActionAttributesBuilder attributesBuilder,
                      final ModifyOnce<String> gitUri,
                      final ModifyOnce<String> branch,
@@ -122,11 +119,6 @@ public class GitActionBuilder extends NodeBuilderBaseImpl<GitActionBuilder> impl
         return this;
     }
 
-    public GitActionBuilder withLauncher(final Launcher launcher) {
-        this.attributesBuilder.withLauncher(launcher);
-        return this;
-    }
-
     public GitActionBuilder withConfigProperty(final String key, final String value) {
         this.attributesBuilder.withConfigProperty(key, value);
         return this;
@@ -138,17 +130,17 @@ public class GitActionBuilder extends NodeBuilderBaseImpl<GitActionBuilder> impl
     }
 
     public GitActionBuilder withBranch(final String branch) {
-        this.branch.add(branch);
+        this.branch.set(branch);
         return this;
     }
 
     public GitActionBuilder withKeyPath(final String keyPath) {
-        this.keyPath.add(keyPath);
+        this.keyPath.set(keyPath);
         return this;
     }
 
     public GitActionBuilder withDestinationUri(final String destinationUri) {
-        this.destinationUri.add(destinationUri);
+        this.destinationUri.set(destinationUri);
         return this;
     }
 

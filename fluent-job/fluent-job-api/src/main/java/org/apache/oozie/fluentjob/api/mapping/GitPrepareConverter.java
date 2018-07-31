@@ -18,10 +18,10 @@
 
 package org.apache.oozie.fluentjob.api.mapping;
 
-import org.apache.oozie.fluentjob.api.generated.action.spark.DELETE;
-import org.apache.oozie.fluentjob.api.generated.action.spark.MKDIR;
-import org.apache.oozie.fluentjob.api.generated.action.spark.ObjectFactory;
-import org.apache.oozie.fluentjob.api.generated.action.spark.PREPARE;
+import org.apache.oozie.fluentjob.api.generated.action.git.DELETE;
+import org.apache.oozie.fluentjob.api.generated.action.git.MKDIR;
+import org.apache.oozie.fluentjob.api.generated.action.git.ObjectFactory;
+import org.apache.oozie.fluentjob.api.generated.action.git.PREPARE;
 import org.apache.oozie.fluentjob.api.action.Delete;
 import org.apache.oozie.fluentjob.api.action.Mkdir;
 import org.apache.oozie.fluentjob.api.action.Prepare;
