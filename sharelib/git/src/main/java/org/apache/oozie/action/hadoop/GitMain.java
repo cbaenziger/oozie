@@ -133,9 +133,8 @@ public class GitMain extends LauncherMain {
     /**
      * Create a local temporary directory
      *
-     * @param string to use as a prefix to the directory
-     * @returns file path of temp. directory (will be set to delete on exit)
-     * @throws Exception
+     * @param prefix string to use as a prefix to the directory
+     * @return file path of temp. directory (will be set to delete on exit)
      */
     protected static File createTempDir(String prefix) throws IOException {
         File tempD = new File(Files.createTempDirectory(
@@ -156,8 +155,8 @@ public class GitMain extends LauncherMain {
      * Validate a URI is well formed and has a scheme
      *
      * @param testUri URI string to test
-     * @returns URI from string
-     * @throws GitMainException
+     * @return URI from string
+     * @throws GitMainException if the <code>testUri</code> fails any validity checks
      */
     private URI isValidUri(String testUri) throws GitMainException {
         URI uri;
@@ -179,7 +178,7 @@ public class GitMain extends LauncherMain {
      * Parse action configuration and set configuration variables
      *
      * @param actionConf Oozie action configuration
-     * @throws NullPointerException upon any properties missing
+     * @throws GitMainException upon any required properties missing
      */
     private void parseActionConfiguration(Configuration actionConf) throws GitMainException {
         GitActionExecutor.VerifyActionConf confChecker = new GitActionExecutor.VerifyActionConf(actionConf);

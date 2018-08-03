@@ -77,6 +77,8 @@ public class GitOperations {
 
     /**
      * Clones a Git repository
+     * @param outputDir location in which to clone the Git repository
+     * @throws GitOperationsException if the Git clone fails
      */
     public void cloneRepo(File outputDir) throws GitOperationsException {
         final SshSessionFactory sshSessionFactory = new JschConfigSessionFactory() {
@@ -128,11 +130,9 @@ public class GitOperations {
     /**
      * Clone a Git repo up to a FileSystem
      *
-     * @param destination - FileSystem path to which repository should be cloned
-     * @param gitSrc - Git repo URI to clone from
-     * @param branch - Git branch to clone
-     * @param credentialFile - local file path containing repository authentication key or null
-     * @throws Exception
+     * @param destination - Hadoop FileSystem path to which repository should be cloned
+     * @throws GitOperationsException if the Git operations fail
+     * @throws IOException if the HDFS or local file system operations fail
      */
     public String cloneRepoToFS(Path destination) throws IOException, GitOperationsException {
         String finishedCopyMsg = "Finished the copy to " + destination.toString() + "!";
