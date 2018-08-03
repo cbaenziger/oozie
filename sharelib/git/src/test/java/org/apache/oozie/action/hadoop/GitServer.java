@@ -44,10 +44,6 @@ import java.util.function.Consumer;
 public class GitServer {
     /**
      * A simple git server serving anynymous git: protocol
-
-     * Inspired from:
-     * * https://stackoverflow.com/questions/14360909/jgit-how-to-use-inmemoryrepository-to-learn-about-dfs-implementations
-     * * https://github.com/centic9/jgit-cookbook/blob/c0f0d591839382461119fc5bd7a73db109d795b0/httpserver/src/main/java/org/dstadler/jgit/server/Main.java#L79-L94 (latter example is not accepting writes and pulls netty making it slower)
      */
     private Map<String, Repository> repositories = new HashMap<>();
     private Daemon server;
@@ -55,7 +51,7 @@ public class GitServer {
     public GitServer() throws IOException {
         this.server = new Daemon(new InetSocketAddress(9418));
         this.server.getService("git-receive-pack").setEnabled(true);
-        this.server.setRepositoryResolver(new RepositoryResolverImplementation());
+        this.server.setRepositoryResolver(new EmptyRepositoryResolverImplementation());
         this.server.start();
     }
 
@@ -64,6 +60,11 @@ public class GitServer {
         this.server.stop();
     }
 
+    /**
+     * A method to:
+     * * remove all files on disk for all repositories
+     * * clear the repositories listed for the GitServer
+     */
     public void cleanUpRepos() {
         for (Repository repository : repositories.values()) {
             File workTree = repository.getWorkTree();
@@ -76,7 +77,10 @@ public class GitServer {
         repositories.clear();
     }
 
-    private final class RepositoryResolverImplementation implements
+    /**
+     * A simple class RepositoryResolver to provide an empty repository for non-existant repo requests
+     */
+    private final class EmptyRepositoryResolverImplementation implements
             RepositoryResolver<DaemonClient> {
 
         @Override
@@ -93,7 +97,8 @@ public class GitServer {
                     repo.create();
                     // commit into the filesystem
                     Git git = new Git(repo);
-                    addInitialCommit(git);
+                    // one needs an initial commit for a proper clone
+                    addEmptyCommit(git);
                     git.close();
                     // serve the Git repo
                     repositories.put(name, repo);
@@ -105,11 +110,12 @@ public class GitServer {
         }
 
         /**
-         * When missing then master branch is missing and can't be checked out in clones.
+         * Add an empty commit to a Git repository
+         * @param git a Git repository to add an empty commit to 
          */
-        public void addInitialCommit(Git git) {
+        public void addEmptyCommit(Git git) {
             try {
-                git.commit().setMessage("Initial empty repo setup").call();
+                git.commit().setMessage("Empty commit").call();
             } catch (GitAPIException e) {
                 throw new RuntimeException(e);
             }
