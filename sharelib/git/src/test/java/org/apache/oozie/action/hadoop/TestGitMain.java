@@ -76,12 +76,11 @@ public class TestGitMain extends MiniOozieTestCase {
            public Workflow create() {
                final GitAction gitAction = GitActionBuilder.create()
                        .withName("git-action")
-                       .withResourceManager("${resourceManager}")
-                       .withNameNode("${nameNode}")
-                       .withConfigProperty("mapred.job.queue.name", "${queueName}")
+                       .withResourceManager(getJobTrackerUri())
+                       .withNameNode(getNameNodeUri())
+                       .withConfigProperty("mapred.job.queue.name", "default")
                        .withGitUri("aURLWithoutAScheme/andSomeMorePathStuff") //XXX Should not have schema
                        .withDestinationUri("repoDir")
-                       .withBranch("myBranch")
                        .build();
 
                final Workflow gitWorkflow = new WorkflowBuilder()
@@ -91,7 +90,6 @@ public class TestGitMain extends MiniOozieTestCase {
                return gitWorkflow;
            }
         }
-        
         Path workflowUri = new Path(getFsTestCaseDir().toString(), "workflow.xml");
         conf.setProperty(OozieClient.APP_PATH, workflowUri.toString());
         
@@ -106,14 +104,11 @@ public class TestGitMain extends MiniOozieTestCase {
             Thread.sleep(10 * 1000);
         }
         
-        /* XXX
-        WorkflowJobBean wf = createBaseWorkflow(protoConf, GitActionExecutor.GIT_ACTION_TYPE + "-action");
-        WorkflowActionBean action = (WorkflowActionBean) wf.getActions().get(0);
-        action.setType(ae.getType());
-
-        Context context = new Context(wf, action);
-        Configuration conf = ae.createBaseHadoopConf(context, actionXml);
-        ae.setupActionConf(conf, context, actionXml, getFsTestCaseDir());*/
+        // Should fail with something akin to:
+        // Failing Oozie Launcher, Action Configuration does not have a proper URI repoDir null scheme.
+        // org.apache.oozie.action.hadoop.GitMain$GitMainException: Action Configuration does not have a proper URI repoDir null scheme.
+        // One needs to look into the YARN logs though to see this as client.getJobLog() is not implemented
+        assertTrue(client.getJobInfo(jobId).getStatus() == WorkflowJob.Status.KILLED);
     }
     
     public void testGitKeyFileIsCopiedToHDFS() throws Exception {
