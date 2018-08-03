@@ -1682,8 +1682,8 @@ As of workflow schema 1.0, zero or more =job-xml= elements can be specified; the
 files bundled in the workflow application. They can be used to set additional properties for the =FileSystem= instance.
 
 As of schema workflow schema 1.0, if a =configuration= element is specified, then it will also be used to set additional =JobConf=
-properties for the =FileSystem= instance. Properties specified in the =configuration= element are overridden by properties specified
-in the files specified by any =job-xml= elements.
+properties for the =FileSystem= instance. Properties specified in the =configuration= element are overridden by properties
+specified in the files specified by any =job-xml= elements.
 
 *Example:*
 
