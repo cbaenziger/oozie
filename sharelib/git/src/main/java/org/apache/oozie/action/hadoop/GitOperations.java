@@ -161,5 +161,5 @@ public class GitOperations {
 
         return destination.toString();
     }
- 
+
 }

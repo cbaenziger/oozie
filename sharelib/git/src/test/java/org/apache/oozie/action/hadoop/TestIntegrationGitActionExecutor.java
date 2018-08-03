@@ -46,7 +46,7 @@ public class TestIntegrationGitActionExecutor extends ActionExecutorTestCase{
         final Path outputPath = getFsTestCaseDir();
         final Path gitRepo = Path.mergePaths(outputPath, new Path("/repoDir"));
         final Path gitIndex = Path.mergePaths(gitRepo, new Path("/.git/config"));
-        
+
         String localRepo = "git://127.0.0.1/repo.git";
         String actionXml = "<git>" +
                 "<resource-manager>" + getJobTrackerUri() + "</resource-manager>" +
@@ -61,7 +61,7 @@ public class TestIntegrationGitActionExecutor extends ActionExecutorTestCase{
         GitServer myGitRepo = null;
         try {
             myGitRepo = new GitServer();
-           
+
             waitUntilYarnAppDoneAndAssertSuccess(launcherId);
         } finally {
             if (myGitRepo != null) {

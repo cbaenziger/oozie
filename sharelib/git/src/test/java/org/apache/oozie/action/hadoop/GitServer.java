@@ -26,7 +26,7 @@ import java.util.function.Consumer;
 public class GitServer {
     /**
      * A simple git server serving anynymous git: protocol
-     
+
      * Inspired from:
      * * https://stackoverflow.com/questions/14360909/jgit-how-to-use-inmemoryrepository-to-learn-about-dfs-implementations
      * * https://github.com/centic9/jgit-cookbook/blob/c0f0d591839382461119fc5bd7a73db109d795b0/httpserver/src/main/java/org/dstadler/jgit/server/Main.java#L79-L94 (latter example is not accepting writes and pulls netty making it slower)
@@ -52,7 +52,7 @@ public class GitServer {
             try {
                 FileUtils.deleteDirectory(workTree.getParentFile());
             } catch (IOException ignored) {
-                
+
             }
         }
         repositories.clear();

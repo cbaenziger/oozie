@@ -70,7 +70,7 @@ public class TestGitMain extends MiniOozieTestCase {
     public void testGitRepoMustHaveScheme() throws Exception {
         OozieClient client = this.getClient();
         Properties conf = client.createConfiguration();
-        
+
         final class GitWorkflowFactory implements WorkflowFactory {
            @Override
            public Workflow create() {
@@ -79,7 +79,8 @@ public class TestGitMain extends MiniOozieTestCase {
                        .withResourceManager(getJobTrackerUri())
                        .withNameNode(getNameNodeUri())
                        .withConfigProperty("mapred.job.queue.name", "default")
-                       .withGitUri("aURLWithoutAScheme/andSomeMorePathStuff") //XXX Should not have schema
+                       //Note: no URI schema
+                       .withGitUri("aURLWithoutAScheme/andSomeMorePathStuff")
                        .withDestinationUri("repoDir")
                        .build();
 
@@ -92,25 +93,23 @@ public class TestGitMain extends MiniOozieTestCase {
         }
         Path workflowUri = new Path(getFsTestCaseDir().toString(), "workflow.xml");
         conf.setProperty(OozieClient.APP_PATH, workflowUri.toString());
-        
-        System.out.println("XXX: " + new GitWorkflowFactory().create().asXml());
-        
+
         writeHDFSFile(workflowUri, new GitWorkflowFactory().create().asXml());
-        
+
         String jobId = client.run(conf);
-        
+
         while (client.getJobInfo(jobId).getStatus() == WorkflowJob.Status.RUNNING) {
             System.out.println("Workflow job running ...");
             Thread.sleep(10 * 1000);
         }
-        
+
         // Should fail with something akin to:
         // Failing Oozie Launcher, Action Configuration does not have a proper URI repoDir null scheme.
         // org.apache.oozie.action.hadoop.GitMain$GitMainException: Action Configuration does not have a proper URI repoDir null scheme.
         // One needs to look into the YARN logs though to see this as client.getJobLog() is not implemented
         assertTrue(client.getJobInfo(jobId).getStatus() == WorkflowJob.Status.KILLED);
     }
-    
+
     public void testGitKeyFileIsCopiedToHDFS() throws Exception {
         final Path credentialFilePath = Path.mergePaths(getFsTestCaseDir(), new Path("/key_dir/my_key.dsa"));
         final String credentialFileData = "Key file data";

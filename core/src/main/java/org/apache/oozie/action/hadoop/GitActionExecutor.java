@@ -135,7 +135,7 @@ public class GitActionExecutor extends JavaActionExecutor {
                         .format("Not able to verify permissions on key file {0}", keyPath), e);
             }
         }
-        
+
         confChecker.trimAndSet(GIT_BRANCH, actionXml.getChild("branch", ns));
 
         actionConf.set(ACTION_TYPE, getType());

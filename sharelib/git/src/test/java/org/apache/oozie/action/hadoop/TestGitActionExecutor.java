@@ -46,7 +46,7 @@ public class TestGitActionExecutor extends ActionExecutorTestCase{
         createTestFile(testKey);
         FileSystem fs = getFileSystem();
         fs.setPermission(testKey, FsPermission.valueOf("-r--------"));
-        
+
         final String repoUrl = "https://github.com/apache/oozie";
         final String keyUrl = testKey.toString();
         final String destDir = "repoDir";
@@ -59,7 +59,7 @@ public class TestGitActionExecutor extends ActionExecutorTestCase{
                 "<key-path>" + keyUrl + "</key-path>"+
                 "<destination-uri>" + destDir + "</destination-uri>" +
                 "</git>");
-        
+
         XConfiguration protoConf = new XConfiguration();
         protoConf.set(WorkflowAppService.HADOOP_USER, getTestUser());
 
@@ -76,7 +76,7 @@ public class TestGitActionExecutor extends ActionExecutorTestCase{
         assertEquals("branch must be set", branch, conf.get(GitActionExecutor.GIT_BRANCH));
         assertEquals("destination uri must be set", destDir, conf.get(GitActionExecutor.DESTINATION_URI));
     }
-    
+
     public void testAccessKeyPermissionsInsecure() throws Exception {
         GitActionExecutor ae = new GitActionExecutor();
 
@@ -85,7 +85,7 @@ public class TestGitActionExecutor extends ActionExecutorTestCase{
         // set file permissions to be u=r, g=, o=rw
         FileSystem fs = getFileSystem();
         fs.setPermission(testKey, FsPermission.valueOf("-r-----rw-"));
-        
+
         final String repoUrl = "https://github.com/apache/oozie";
         final String keyUrl = testKey.toString();
         final String destDir = "repoDir";
@@ -118,7 +118,7 @@ public class TestGitActionExecutor extends ActionExecutorTestCase{
             }
         }
     }
-    
+
     public void testAccessKeyACLsSecure() throws Exception {
         GitActionExecutor ae = new GitActionExecutor();
 
@@ -128,7 +128,7 @@ public class TestGitActionExecutor extends ActionExecutorTestCase{
         FileSystem fs = getFileSystem();
         fs.setPermission(testKey, FsPermission.valueOf("-r--------"));
         fs.setAcl(testKey, AclEntry.parseAclSpec("user::rwx,user:foo:rw-,group::r--,other::---", true));
-        
+
         final String repoUrl = "https://github.com/apache/oozie";
         final String keyUrl = testKey.toString();
         final String destDir = "repoDir";
@@ -163,7 +163,7 @@ public class TestGitActionExecutor extends ActionExecutorTestCase{
         FileSystem fs = getFileSystem();
         fs.setPermission(testKey, FsPermission.valueOf("-r--------"));
         fs.setAcl(testKey, AclEntry.parseAclSpec("user::rwx,user:foo:rw-,group::r--,other::r--", true));
-        
+
         final String repoUrl = "https://github.com/apache/oozie";
         final String keyUrl = testKey.toString();
         final String destDir = "repoDir";
@@ -187,14 +187,14 @@ public class TestGitActionExecutor extends ActionExecutorTestCase{
         Context context = new Context(wf, action);
         Configuration conf = ae.createBaseHadoopConf(context, actionXml);
     }
-    
+
     private void createTestFile(Path testFile) throws IOException {
         FileSystem fs = getFileSystem();
         FSDataOutputStream file = fs.create(testFile);
         file.writeUTF("");
         file.close();
     }
-    
+
     @Override
     protected void setSystemProps() throws Exception {
         super.setSystemProps();
